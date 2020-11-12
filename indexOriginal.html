@@ -1,0 +1,1104 @@
+<html>
+
+<head>
+    <style type="text/css">
+        .cls-drp-feature {
+            width: 150px;
+            height: auto;
+            float: right;
+            padding: 5px;
+            font-size: 12px;
+            color: #000;
+            position: absolute;
+            right: 80px;
+        }
+
+        .line-rect {
+            margin-right: 5px;
+            width: 20px;
+            height: 3px;
+            background-color: red;
+            display: inline-block;
+        }
+
+        .legend-container {
+            display: flex;
+            align-items: center;
+        }
+
+        #chart,
+        .cls-drp-feature {
+            display: inline-block;
+        }
+
+        .y-axis-water path {
+            stroke: transparent;
+        }
+
+        .y-axis-gas path,
+        .y-axis-oil path,
+        .x-axis path {
+            stroke: #bbb;
+        }
+
+        .y-axis-oil .tick line,
+        .y-axis-gas .tick line,
+        .y-axis-water .tick line,
+        .x-axis .tick line {
+            stroke: #bbb;
+        }
+
+
+        .axis-label-water,
+        .axis-label-gas,
+        .axis-label-oil,
+        .axis-label-xaxis {
+            fill: #555;
+            font-size: 15px;
+        }
+
+        .axis-label-gas {
+            text-anchor: end;
+        }
+
+        .axis-label-xaxis {
+            text-anchor: start;
+        }
+
+        .line-water path,
+        .line-oil path,
+        .line-gas path {
+            fill: none;
+        }
+
+
+        .lasso path {
+            stroke: rgb(80, 80, 80);
+            stroke-width: 2px;
+        }
+
+        .lasso .drawn {
+            fill-opacity: .05;
+        }
+
+        .lasso .loop_close {
+            fill: none;
+            stroke-dasharray: 4, 4;
+        }
+
+        .lasso .origin {
+            fill: #3399FF;
+            fill-opacity: .5;
+        }
+
+        .not_possible {
+            fill: rgb(200, 200, 200);
+        }
+
+        .possible {
+            fill: #EC888C;
+        }
+
+        #chart{
+            position: relative;
+        }
+        .svg-with-line,
+        .svg-y-axis-water-rect{
+            position: absolute;
+        }
+        .tooltip-table-row{
+            font-size: var(--body-text-size);
+            color:#808080;
+            
+        }
+        .tooltip-table-row .header{
+            font-weight: var(--bold-font-weight);
+        }
+
+        .custom-tooltip {
+            display: inline-block;
+            height: auto;
+            width: auto;
+            position: absolute;
+            z-index: 9999;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            pointer-events: none;
+            
+        }
+
+        .rectangle-container{
+            position: absolute;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            left: 0px;
+        }
+        .rectangle-div{
+            width: 20px;
+            height: 20px;
+            background: white;
+            transform: rotate(45deg);
+            transform: rotate(45deg);
+            border-bottom: 1px solid #ccc;
+            border-right: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="text-center">
+        <div id="chart"></div>
+        <div class="cls-drp-feature">
+            <select id="drpFeatures" onchange="drpFeatures_Changed()">
+                <option value="lasso"> Lasso</option>
+                <option value="zoom"> Zoom</option>
+            </select>
+            <div class="legend">
+                <div class='legend-container'>
+                    <div class="line-rect" style="background: steelblue;"></div><span class="text-label">Monthly
+                        Oil</span>
+                </div>
+                <div class='legend-container'>
+                    <div class="line-rect" style="background: green;"></div><span class="text-label">Monthly Gas</span>
+                </div>
+                <div class='legend-container'>
+                    <div class="line-rect" style="background: #da4545;"></div><span class="text-label">Monthly
+                        Water</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="d3.v5.min.js"></script>
+    <script src="jquery.js"></script>
+    <script src="data.js"></script>
+    <script src="d3-lasso.min.js"></script>
+    <script>
+        const mainDivRef = "#chart";
+        const margin = {
+            left: 80,
+            right: 80,
+            top: 20,
+            bottom: 50
+        };
+        const width = 1000;
+        const height = 600;
+        const chartWidth = width - ((margin.left * 2) + margin.right);
+        const chartHeight = height - (margin.top + margin.bottom);
+        const lassoMultiplier=5;
+
+        let monthlyData = chartData;
+        const array_oil = [];
+
+
+        const colors = {
+            oil: 'steelblue',
+            gas: 'green',
+            water: '#da4545'
+        };
+
+        const array_gas = [];
+        const array_water = [];
+        const allValues = [];
+        const allDates = [];
+
+        const parseTime = d3.timeParse("%m%d%Y");
+
+        monthlyData = monthlyData.sort((a, b) => {
+            return new Date(parseTime(a.DisplayDate)).getTime() - new Date(parseTime(b.DisplayDate)).getTime();
+        })
+
+        for (let i = 0; i < monthlyData.length; i++) {
+            let oil = {};
+            oil.x = parseTime(monthlyData[i].DisplayDate);
+            oil.y = monthlyData[i].Oil;
+            oil.section = "Oil";
+            oil.colors = colors.oil;
+            allValues.push(monthlyData[i].Oil);
+            allDates.push(oil.x);
+            array_oil.push(oil);
+
+            let gas = {};
+            gas.x = parseTime(monthlyData[i].DisplayDate);
+            //gas.x = (i + 1);
+            gas.y = monthlyData[i].Gas;
+            gas.section = "Gas";
+            gas.colors = colors.gas;
+            allValues.push(monthlyData[i].Gas);
+            allDates.push(gas.x);
+            array_gas.push(gas);
+
+            let water = {};
+            water.x = parseTime(monthlyData[i].DisplayDate);
+            //water.x = (i + 1);
+            water.y = monthlyData[i].Water;
+            water.section = "Water";
+            water.colors = colors.water;
+            allValues.push(monthlyData[i].Water);
+            allDates.push(water.x);
+            array_water.push(water);
+        }
+
+        const data = [];
+        data.push(array_oil);
+        data.push(array_gas);
+        data.push(array_water);
+
+        const oilMinMax = d3.extent(array_oil.map(d => d.y));
+        const gasMinMax = d3.extent(array_gas.map(d => d.y));
+        const waterMinMax = d3.extent(array_water.map(d => d.y));
+        const overallMinMax = d3.extent([...oilMinMax, ...gasMinMax, ...waterMinMax]);
+
+        const minDate = Math.min.apply(null, allDates);
+        const maxDate = Math.max.apply(null, allDates);
+        const xScale = d3.scaleTime()
+            .domain([minDate, maxDate])
+            .range([0, chartWidth]);
+
+
+
+        const yScaleWater = d3.scaleLinear()
+            .domain([waterMinMax[0], waterMinMax[1]])
+            .range([chartHeight, 0]);
+
+
+        const yScaleOil = d3.scaleLinear()
+            .domain([waterMinMax[0], waterMinMax[1]])
+            .range([chartHeight, 0]);
+
+        const yScaleGas = d3.scaleLinear()
+            .domain([gasMinMax[0], gasMinMax[1]])
+            .range([chartHeight, 0]);
+
+        const xScaleLasso=d3.scaleTime()
+            .domain([minDate, maxDate])
+            .range([0, chartWidth]);
+        const yScaleGasLasso=d3.scaleLinear()
+            .domain([gasMinMax[0], gasMinMax[1]])
+            .range([chartHeight, 0]);
+        const yScaleOilLasso=d3.scaleLinear()
+            .domain([waterMinMax[0], waterMinMax[1]])
+            .range([chartHeight, 0]);
+        const yScaleWaterLasso=d3.scaleLinear()
+            .domain([waterMinMax[0], waterMinMax[1]])
+            .range([chartHeight, 0]);;
+
+
+        const svg = d3.select("#chart")
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const svgForLines=d3.select("#chart")
+            .append("svg")
+            .attr("class","svg-with-line")
+            .attr("width", chartWidth)
+            .attr("height", chartHeight)
+            .style("top", margin.top)
+            .style("left", margin.left*2);    
+
+        const xAxis = d3.axisBottom(xScale);
+
+
+        const yAxisWater = d3.axisLeft(yScaleWater);
+        const yAxisOil = d3.axisLeft(yScaleOil);
+        const yAxisGas = d3.axisRight(yScaleGas);
+
+
+        const axisGWater = svg.append("g")
+            .attr("class", "y-axis-water");
+
+        axisGWater.attr("transform", `translate(${margin.left},${margin.top})`)
+            .call(yAxisWater.ticks(7));
+
+        axisGWater
+            .append("text")
+            .attr("class", "axis-label-water")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -1 * (margin.left * 0.7))
+            .attr("x", -1 * ((height / 2) * 0.8))
+            .text('Water (BBL/d)');
+
+        
+
+        const axisGOil = svg.append("g")
+            .attr("class", "y-axis-oil");
+
+        axisGOil.attr("transform", `translate(${margin.left*2},${margin.top})`)
+            .call(yAxisOil.ticks(7).tickSize(-1 * chartWidth));
+
+        axisGOil
+            .append("text")
+            .attr("class", "axis-label-oil")
+            .attr("transform", "rotate(-90)")
+            .attr("y", -1 * (margin.left * 0.7))
+            .attr("x", -1 * ((height / 2) * 0.8))
+            .text('Oil (BBL/d)');
+
+        const axisGGas = svg.append("g")
+            .attr("class", "y-axis-gas");
+
+        axisGGas.attr("transform", `translate(${width-margin.right},${margin.top})`)
+            .call(yAxisGas.ticks(7));
+
+        axisGGas
+            .append("text")
+            .attr("class", "axis-label-gas")
+            .attr("transform", "rotate(-90)")
+            .attr("y", (margin.left * 0.8))
+            .attr("x", -1 * ((height / 2) * 0.8))
+            .text('Gas (MCF/d)');
+
+        const axisGXAxis = svg.append("g")
+            .attr("class", "x-axis")
+            .attr("transform", `translate(${(margin.left*2)},${(height-(margin.bottom))})`);
+
+        axisGXAxis.call(xAxis);
+
+        axisGXAxis.append("text")
+            .attr("class", "axis-label-xaxis")
+            .attr("y", margin.bottom * 0.8)
+            .attr("x", ((width) / 2) - (margin.left * 2))
+            .text('Date');
+
+
+        const lineWater = d3.line()
+            .curve(d3.curveStepBefore)
+            .x(d => xScale(d.x))
+            .y(d => yScaleWater(d.y));
+
+        const lineOil = d3.line()
+            .curve(d3.curveStepBefore)
+            .x(d => xScale(d.x))
+            .y(d => yScaleOil(d.y));
+
+        const lineGas = d3.line()
+            .curve(d3.curveStepBefore)
+            .x(d => xScale(d.x))
+            .y(d => yScaleGas(d.y));
+
+        const circleRadius = 3;
+
+        const lineWaterG = svgForLines.append("g")
+            .attr("class", 'line-water')
+            .attr("transform", `translate(${0},${0})`);
+
+        lineWaterG
+            .append("path")
+            .data([array_water])
+            .attr("d", lineWater)
+            .style("stroke", d => d[0].colors);
+
+        lineWaterG.selectAll("circle")
+            .data(array_water)
+            .enter()
+            .append("circle")
+            .datum(d => d)
+            .attr("data", d => JSON.stringify(d))
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => yScaleWater(d.y))
+            .attr("r", circleRadius)
+            .style("fill", d => d.colors);
+
+
+        const lineOilG = svgForLines.append("g")
+            .attr("class", 'line-oil')
+            .attr("transform", `translate(${0},${0})`);
+
+        lineOilG
+            .append("path")
+            .data([array_oil])
+            .attr("d", lineOil)
+            .style("stroke", d => d[0].colors);
+
+        lineOilG.selectAll("circle")
+            .data(array_oil)
+            .enter()
+            .append("circle")
+            .datum(d => d)
+            .attr("data", d => JSON.stringify(d))
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => yScaleOil(d.y))
+            .attr("r", circleRadius)
+            .style("fill", d => d.colors);
+
+
+        const lineGasG = svgForLines.append("g")
+            .attr("class", 'line-gas')
+            .attr("transform", `translate(${0},${0})`);
+
+        lineGasG
+            .append("path")
+            .data([array_gas])
+            .attr("d", lineGas)
+            .style("stroke", d => d[0].colors);
+
+        lineGasG.selectAll("circle")
+            .data(array_gas)
+            .enter()
+            .append("circle")
+            .datum(d => d)
+            .attr("data", d => JSON.stringify(d))
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => yScaleGas(d.y))
+            .attr("r", circleRadius)
+            .style("fill", d => d.colors);
+
+
+        const lassoEndSelectionG = svgForLines.append("g")
+            .attr("class", "lasso-selected-container")
+            .attr("transform", `translate(${0},${0})`);
+
+        //CBT:Daily Data Plotting start
+        const dailyDataG = svgForLines.append("g")
+            .attr("class", "daily-data-container")
+            .attr("transform", `translate(${0},${0})`);
+
+        const array_gas_daily = [];
+        const array_water_daily = [];
+        const array_oil_daily = []
+
+        for (let i = 0; i < dailyData.length; i++) {
+            let oil = {};
+            oil.x = parseTime(dailyData[i].DisplayDate);
+            oil.y = dailyData[i].Oil;
+            oil.section = "Oil";
+            oil.colors = colors.oil;
+            array_oil_daily.push(oil);
+
+            let gas = {};
+            gas.x = parseTime(dailyData[i].DisplayDate);
+            //gas.x = (i + 1);
+            gas.y = dailyData[i].Gas;
+            gas.section = "Gas";
+            gas.colors = colors.gas;
+            array_gas_daily.push(gas);
+
+            let water = {};
+            water.x = parseTime(dailyData[i].DisplayDate);
+            //water.x = (i + 1);
+            water.y = dailyData[i].Water;
+            water.section = "Water";
+            water.colors = colors.water;
+            array_water_daily.push(water);
+        }
+
+        const daily_data_all = [...array_gas_daily, ...array_oil_daily, ...array_water_daily];
+
+        dailyDataG.selectAll("circle")
+            .data(daily_data_all)
+            .enter()
+            .append("circle")
+            .datum(d => d)
+            .attr("cx", d => xScale(d.x))
+            .attr("cy", d => {
+                if (d.section.toLowerCase() == 'oil')
+                    return yScaleOil(d.y)
+                else if (d.section.toLowerCase() == 'gas')
+                    return yScaleGas(d.y)
+                else if (d.section.toLowerCase() == 'water')
+                    return yScaleWater(d.y)
+            })
+            .attr("class", d => {
+                if (d.section.toLowerCase() == 'oil')
+                    return "circle-daily-oil"
+                else if (d.section.toLowerCase() == 'gas')
+                    return "circle-daily-gas"
+                else if (d.section.toLowerCase() == 'water')
+                    return "circle-daily-water"
+            })
+            .attr("r", circleRadius)
+            .style("fill", d => d.colors);
+
+        //CBT:Daily Data Plotting end
+
+
+
+       
+
+        const zoom = d3.zoom()
+            // .scaleExtent([0.5, 5])
+            .translateExtent([
+                [-chartWidth * 2, -chartHeight * 2],
+                [chartWidth * 2, chartHeight * 2]
+            ])
+            .on("zoom", zoomed);
+
+        function zoomed() {
+            const currentTransform = d3.event.transform;
+            axisGXAxis.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
+            axisGWater.call(yAxisWater.scale(d3.event.transform.rescaleY(yScaleWater)));
+            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
+            axisGGas.call(yAxisGas.scale(d3.event.transform.rescaleY(yScaleGas)));
+
+
+            
+
+
+            //CBT:daily data zoom start
+            d3.select(".daily-data-container").selectAll(".circle-daily-gas")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            d3.select(".daily-data-container").selectAll(".circle-daily-oil")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+
+            d3.select(".daily-data-container").selectAll(".circle-daily-water")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y));
+
+            //CBT:daily data zoom end
+
+            //CBT:lasso data zoom start
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-water")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y * lassoMultiplier));
+
+            //CBT:lasso data zoom end
+
+
+            d3.select(".line-gas").selectAll("circle")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            const updatedLineGas = d3.line()
+                .curve(d3.curveStepBefore)
+                .x(d => (d3.event.transform.rescaleX(xScale)(d.x)))
+                .y(d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            d3.select(".line-gas")
+                .select("path")
+                .attr("d", updatedLineGas);
+
+
+            d3.select(".line-water").selectAll("circle")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y));
+
+            const updatedLineWater = d3.line()
+                .curve(d3.curveStepBefore)
+                .x(d => (d3.event.transform.rescaleX(xScale)(d.x)))
+                .y(d => d3.event.transform.rescaleY(yScaleWater)(d.y));
+
+            d3.select(".line-water")
+                .select("path")
+                .attr("d", updatedLineWater);
+
+
+            d3.select(".line-oil").selectAll("circle")
+                .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            const updatedLineOil = d3.line()
+                .curve(d3.curveStepBefore)
+                .x(d => (d3.event.transform.rescaleX(xScale)(d.x)))
+                .y(d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            d3.select(".line-oil")
+                .select("path")
+                .attr("d", updatedLineOil);
+
+
+            xScaleLasso.domain(d3.event.transform.rescaleX(xScale).domain());
+            yScaleWaterLasso.domain(d3.event.transform.rescaleY(yScaleWater).domain());
+            yScaleGasLasso.domain(d3.event.transform.rescaleY(yScaleGas).domain());
+            yScaleOilLasso.domain(d3.event.transform.rescaleY(yScaleOil).domain()); 
+
+        }
+        svgForLines.call(zoom);
+
+
+        function onLassoReactMouseMove(event){
+            const allSelectedPoints=calculateDataOnClick(this);
+            if(allSelectedPoints.length>0){
+                console.log(JSON.stringify(allSelectedPoints));
+                let tooltipData = "";
+                let topLeftPositionOfTooltip = { topPosition: 100, leftPosition: 100 };
+                tooltipData = (
+                    '<div className="tooltip-table">\
+                            <div className="tooltip-table-row">\
+                                <span className="header">Date:</span>\
+                                <span>'+ d3.timeFormat("%Y-%m-%d")(new Date(allSelectedPoints[0].x)) + '</span>\
+                            </div>\
+                            <div className="tooltip-table-row">\
+                                <span className="header">Section:</span>\
+                                <span>'+ allSelectedPoints[0].section + '</span>\
+                            </div>\
+                            <div className="tooltip-table-row">\
+                                <span className="header">Value:</span>\
+                                <span>'+ allSelectedPoints[0].y + '</span>\
+                            </div>\
+                        </div>'
+                );
+                topLeftPositionOfTooltip = {
+                    topPosition:d3.mouse(this)[1]+d3.select(this).node().getBoundingClientRect().top-circleRadius+window.scrollY,
+                    leftPosition:d3.mouse(this)[0]+d3.select(this).node().getBoundingClientRect().left-(circleRadius*2)+window.scrollX
+                };
+                callShowTooltip(topLeftPositionOfTooltip.topPosition, topLeftPositionOfTooltip.leftPosition, tooltipData, mainDivRef);
+            }else{
+                callHideTooltip(mainDivRef); 
+            }
+            
+        }
+        function onLassoReactMouseOut(event){
+            console.log("Event: Mouse Out");
+            callHideTooltip(mainDivRef);
+        }
+
+        function onLassoReactClick(event){
+            const allSelectedPoints=calculateDataOnClick(this);
+            if(allSelectedPoints.length>0)
+                alert(JSON.stringify(allSelectedPoints));
+        }
+
+        function callShowTooltip(topPosition,leftPosition,childrenData,mainDivRef){
+            d3.select(mainDivRef).select(".custom-tooltip").remove();
+            const tooltipMain=d3.select(mainDivRef).append("div")
+            .attr("class","custom-tooltip");
+            tooltipMain.style("left","0px");
+            tooltipMain.append("div").html(childrenData);
+            tooltipMain.append("div")
+            .attr("class","rectangle-container")
+            .append("div")
+            .attr("class","rectangle-div");
+
+            tooltipMain.style("top",(topPosition-(tooltipMain.node().getBoundingClientRect().height+20))+"px")
+            .style("left",(leftPosition-(tooltipMain.node().getBoundingClientRect().width/2))+"px");
+        }
+
+        function callHideTooltip(mainDivRef){
+            d3.select(mainDivRef).select(".custom-tooltip").remove();
+        }
+
+
+        function calculateDataOnClick(source){
+            console.log("Event:",d3.mouse(source),xScaleLasso.invert(d3.mouse(source)[0]));
+            const x=d3.mouse(source)[0];
+            const y=d3.mouse(source)[1];
+            const selectedPointsGas=[];
+            const selectedPointsWater=[];
+            const selectedPointsOil=[];
+            const xValue=xScaleLasso(xScaleLasso.invert(x));
+            const yValueGas=yScaleGasLasso(yScaleGasLasso.invert(y));
+            const yValueWater=yScaleWaterLasso(yScaleWaterLasso.invert(y));
+            const yValueOil=yScaleOilLasso(yScaleOilLasso.invert(y));
+            // section
+            d3.selectAll("circle").each(data=>{
+                // console.log("Circle",data);
+                
+                if(data!=undefined && data.section.toLowerCase()=='gas'){
+                    const cx=xScaleLasso(data.x);
+                    const cy=yScaleGasLasso(data.y);
+                    if(xValue>=(cx-circleRadius) && xValue<=(cx+circleRadius) && yValueGas>=(cy-circleRadius) && yValueGas<=(cy+circleRadius)){
+                        selectedPointsGas.push(data);
+                    }
+                }
+
+                if(data!=undefined && data.section.toLowerCase()=='water'){
+                    const cx=xScaleLasso(data.x);
+                    const cy=yScaleWaterLasso(data.y);
+                    if(xValue>=(cx-circleRadius) && xValue<=(cx+circleRadius) && yValueWater>=(cy-circleRadius) && yValueWater<=(cy+circleRadius)){
+                        selectedPointsWater.push(data);
+                    }
+                }
+
+                if(data!=undefined && data.section.toLowerCase()=='oil'){
+                    const cx=xScaleLasso(data.x);
+                    const cy=yScaleOilLasso(data.y);
+                    if(xValue>=(cx-circleRadius) && xValue<=(cx+circleRadius) && yValueOil>=(cy-circleRadius) && yValueOil<=(cy+circleRadius)){
+                        selectedPointsOil.push(data);
+                    }
+                }
+            })
+            console.log("selected Gas Data:",selectedPointsGas);
+            console.log("selected Water Data:",selectedPointsWater);
+            console.log("selected Oil Data:",selectedPointsOil);
+            
+            const allSelectedPoints=[...selectedPointsGas,...selectedPointsWater,...selectedPointsOil];
+            return allSelectedPoints;
+            
+        }
+        const lasso_area = svgForLines
+            .append("rect")
+            .attr("class","lasso-area-rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", chartWidth)
+            .attr("height", chartHeight)
+            .style("opacity", 0)
+            .on("click",onLassoReactClick)
+            .on("mousemove",onLassoReactMouseMove)
+            .on("mouseout",onLassoReactMouseOut);
+            
+
+
+
+        var lasso_start = function () {
+            // lassoEndSelectionG.html('');
+            lasso.items()
+                .attr("r", circleRadius) // reset size
+                .classed("not_possible", true)
+                .classed("selected", false);
+        };
+
+        var lasso_draw = function () {
+
+            // Style the possible dots
+            lasso.possibleItems()
+                .classed("not_possible", false)
+                .classed("possible", true);
+
+            // Style the not possible dot
+            lasso.notPossibleItems()
+                .classed("not_possible", true)
+                .classed("possible", false);
+        };
+        let lassoSelectedData = [];
+
+        
+
+        var lasso_end = function () {
+            // Reset the color of all dots
+            lasso.items()
+                .classed("not_possible", false)
+                .classed("possible", false);
+
+            // Style the selected dots
+            // lasso.selectedItems()
+            //     .classed("selected", true)
+            //     .attr("r", 5);
+
+            const data = [];
+            lasso.selectedItems().each(d => {
+                if (d != undefined)
+                    data.push(d)
+            })
+            console.log("Selected Items:", data);
+            lassoSelectedData = [...lassoSelectedData, ...data];
+            lassoEndSelectionG.html('');
+            lassoEndSelectionG
+                .selectAll("circle")
+                .data(lassoSelectedData)
+                .enter()
+                .append("circle")
+                .datum(d => d)
+                .attr("cx", d => xScaleLasso(d.x))
+                .attr("cy", d => {
+                    if (d.section.toLowerCase() == 'oil')
+                        return yScaleOilLasso(d.y * lassoMultiplier)
+                    else if (d.section.toLowerCase() == 'gas')
+                        return yScaleGasLasso(d.y * lassoMultiplier)
+                    else if (d.section.toLowerCase() == 'water')
+                        return yScaleWaterLasso(d.y * lassoMultiplier)
+                })
+                .attr("class", d => {
+                    if (d.section.toLowerCase() == 'oil')
+                        return "lasso-selected-oil"
+                    else if (d.section.toLowerCase() == 'gas')
+                        return "lasso-selected-gas"
+                    else if (d.section.toLowerCase() == 'water')
+                        return "lasso-selected-water"
+                })
+                .attr("r", circleRadius)
+                .style("fill", d => d.colors);
+
+            // Reset the style of the not selected dots
+            lasso.notSelectedItems()
+                .attr("r", circleRadius);
+
+
+
+        };
+
+        const lasso = d3.lasso()
+            .closePathSelect(true)
+            .closePathDistance(100)
+            .items(d3.selectAll("circle"))
+            .targetArea(lasso_area)
+            .on("start", lasso_start)
+            .on("draw", lasso_draw)
+            .on("end", lasso_end);
+
+        svgForLines.call(lasso);
+
+        //CBT:Pan Feature on each Y Axis Start
+        const zoomOnYAxisWater = d3.zoom()
+            .translateExtent([
+                [-(margin.left) * 2, -chartHeight * 2],
+                [margin.left * 2, chartHeight * 2]
+            ])
+            .on("zoom", zoomedOnYAxisWater);
+
+        function zoomedOnYAxisWater() {
+            const currentTransform = d3.event.transform;
+            // axisGXAxis.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
+            axisGWater.call(yAxisWater.scale(d3.event.transform.rescaleY(yScaleWater)));
+            // axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
+            // axisGGas.call(yAxisGas.scale(d3.event.transform.rescaleY(yScaleGas)));
+
+
+            //CBT:daily data zoom start
+            // d3.select(".daily-data-container").selectAll(".circle-daily-gas")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            // d3.select(".daily-data-container").selectAll(".circle-daily-oil")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+
+            d3.select(".daily-data-container").selectAll(".circle-daily-water")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y));
+
+            //CBT:daily data zoom end
+
+            //CBT:lasso data zoom start
+
+            // d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y * lassoMultiplier));
+
+            // d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-water")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y * lassoMultiplier));
+
+            //CBT:lasso data zoom end
+
+
+            // d3.select(".line-gas").selectAll("circle")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            // const updatedLineGas = d3.line()
+            //     .curve(d3.curveStepBefore)
+            //     .x(d => (xScale(d.x)))
+            //     .y(d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            // d3.select(".line-gas")
+            //     .select("path")
+            //     .attr("d", updatedLineGas);
+
+
+            d3.select(".line-water").selectAll("circle")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y));
+
+            const updatedLineWater = d3.line()
+                .curve(d3.curveStepBefore)
+                .x(d => (xScale(d.x)))
+                .y(d => d3.event.transform.rescaleY(yScaleWater)(d.y));
+
+            d3.select(".line-water")
+                .select("path")
+                .attr("d", updatedLineWater);
+
+
+            // d3.select(".line-oil").selectAll("circle")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            // const updatedLineOil = d3.line()
+            //     .curve(d3.curveStepBefore)
+            //     .x(d => (xScale(d.x)))
+            //     .y(d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            // d3.select(".line-oil")
+            //     .select("path")
+            //     .attr("d", updatedLineOil);
+
+
+            // xScaleLasso.domain(xScale.domain());
+            yScaleWaterLasso.domain(d3.event.transform.rescaleY(yScaleWater).domain());
+            // yScaleGasLasso.domain(d3.event.transform.rescaleY(yScaleGas).domain());
+            // yScaleOilLasso.domain(d3.event.transform.rescaleY(yScaleOil).domain()); 
+
+        }
+        
+        //This is for y Axis water background SVG
+        const svgForYAxisWaterRect=d3.select("#chart")
+            .append("svg")
+            .attr("class","svg-y-axis-water-rect")
+            .attr("width", margin.left)
+            .attr("height", chartHeight)
+            .style("top", margin.top)
+            .style("left", 0); 
+            
+        const zoomOnYAxisGas = d3.zoom()
+            .translateExtent([
+                [-(margin.left) * 2, -chartHeight * 2],
+                [margin.left * 2, chartHeight * 2]
+            ])
+            .on("zoom", zoomedOnYAxisGas);
+
+        function zoomedOnYAxisGas() {
+            const currentTransform = d3.event.transform;
+            // axisGXAxis.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
+            // axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
+            axisGGas.call(yAxisGas.scale(d3.event.transform.rescaleY(yScaleGas)));
+
+
+            //CBT:daily data zoom start
+            d3.select(".daily-data-container").selectAll(".circle-daily-gas")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            // d3.select(".daily-data-container").selectAll(".circle-daily-oil")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+            //CBT:daily data zoom end
+
+            //CBT:lasso data zoom start
+
+            // d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y * lassoMultiplier));
+
+            //CBT:lasso data zoom end
+
+
+            d3.select(".line-gas").selectAll("circle")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            const updatedLineGas = d3.line()
+                .curve(d3.curveStepBefore)
+                .x(d => (xScale(d.x)))
+                .y(d => d3.event.transform.rescaleY(yScaleGas)(d.y));
+
+            d3.select(".line-gas")
+                .select("path")
+                .attr("d", updatedLineGas);
+
+
+            // d3.select(".line-oil").selectAll("circle")
+            //     .attr("cx", d => xScale(d.x))
+            //     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            // const updatedLineOil = d3.line()
+            //     .curve(d3.curveStepBefore)
+            //     .x(d => (xScale(d.x)))
+            //     .y(d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            // d3.select(".line-oil")
+            //     .select("path")
+            //     .attr("d", updatedLineOil);
+
+
+            // xScaleLasso.domain(xScale.domain());
+            yScaleGasLasso.domain(d3.event.transform.rescaleY(yScaleGas).domain());
+            // yScaleOilLasso.domain(d3.event.transform.rescaleY(yScaleOil).domain()); 
+        }
+        
+        //This is for y Axis water background SVG
+        const svgForYAxisGasRect=d3.select("#chart")
+            .append("svg")
+            .attr("class","svg-y-axis-water-rect")
+            .attr("width", margin.right)
+            .attr("height", chartHeight)
+            .style("top", margin.top)
+            .style("left", width-margin.right); 
+
+        const zoomOnYAxisOil = d3.zoom()
+            .translateExtent([
+                [-(margin.left) * 2, -chartHeight * 2],
+                [margin.left * 2, chartHeight * 2]
+            ])
+            .on("zoom", zoomedOnYAxisOil);
+
+        function zoomedOnYAxisOil() {
+            const currentTransform = d3.event.transform;
+            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
+
+            //CBT:daily data zoom start
+            d3.select(".daily-data-container").selectAll(".circle-daily-oil")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+            //CBT:daily data zoom end
+
+            //CBT:lasso data zoom start
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y * lassoMultiplier));
+
+            //CBT:lasso data zoom end
+            d3.select(".line-oil").selectAll("circle")
+                .attr("cx", d => xScale(d.x))
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            const updatedLineOil = d3.line()
+                .curve(d3.curveStepBefore)
+                .x(d => (xScale(d.x)))
+                .y(d => d3.event.transform.rescaleY(yScaleOil)(d.y));
+
+            d3.select(".line-oil")
+                .select("path")
+                .attr("d", updatedLineOil);
+
+            yScaleOilLasso.domain(d3.event.transform.rescaleY(yScaleOil).domain()); 
+        }
+        
+        //This is for y Axis water background SVG
+        const svgForYAxisOilRect=d3.select("#chart")
+            .append("svg")
+            .attr("class","svg-y-axis-water-rect")
+            .attr("width", margin.left)
+            .attr("height", chartHeight)
+            .style("top", margin.top)
+            .style("left", margin.left); 
+        
+        //CBT:Pan Feature on each Y Axis End
+
+
+
+
+
+        function drpFeatures_Changed() {
+            // lassoEndSelectionG.html('');
+            if ($("#drpFeatures").val() == "zoom") {
+                lasso_area.on(".dragstart", null);
+                lasso_area.on(".drag", null);
+                lasso_area.on(".dragend", null);
+
+                svgForLines.call(zoom);
+                svgForYAxisWaterRect.call(zoomOnYAxisWater);
+                svgForYAxisGasRect.call(zoomOnYAxisGas);
+                svgForYAxisOilRect.call(zoomOnYAxisOil);
+            } else {
+                svgForLines.on('.zoom', null);
+                svgForYAxisWaterRect.on('.zoom', null);
+                svgForYAxisGasRect.on('.zoom', null);
+                svgForYAxisOilRect.on('.zoom', null);
+                svgForLines.call(lasso);
+                lasso.items(d3.selectAll("circle"));
+            }
+        }
+
+        drpFeatures_Changed();
+
+        
+    </script>
+</body>
+
+</html>
