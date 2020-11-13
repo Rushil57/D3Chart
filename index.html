@@ -253,20 +253,25 @@
 
         const minDate = Math.min.apply(null, allDates);
         const maxDate = Math.max.apply(null, allDates);
+        let xScaleZoom =null;
         const xScale = d3.scaleTime()
             .domain([minDate, maxDate])
             .range([0, chartWidth]);
 
-
-
+        const noteLabelsWater=[];
+        const noteLabelsGas=[];
+        const noteLabelsOil=[];
+        let yScaleWaterZoom=null;
         const yScaleWater = d3.scaleLog()
             .domain([waterMinMax[0] < 0.1 ? 0.1 : waterMinMax[0], waterMinMax[1]])
             .range([chartHeight, 0]);
 
+        let yScaleOilZoom=null;
         const yScaleOil = d3.scaleLog()
             .domain([oilMinMax[0] < 0.1 ? 0.1 :oilMinMax[0], oilMinMax[1]])
             .range([chartHeight, 0]);
 
+        let yScaleGasZoom=null;
         const yScaleGas = d3.scaleLog()
             .domain([gasMinMax[0] < 0.1 ? 0.1 :gasMinMax[0], gasMinMax[1]])
             .range([chartHeight, 0]);
@@ -531,10 +536,36 @@
             axisGWater.call(yAxisWater.scale(d3.event.transform.rescaleY(yScaleWater)));
             axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
             axisGGas.call(yAxisGas.scale(d3.event.transform.rescaleY(yScaleGas)));
+           
+            noteLabelsWater.forEach(notes=>{
+                const xPoint=d3.event.transform.rescaleX(notes.xScaleToUSe)(notes.x);
+                const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
+                fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
+            });
+            noteLabelsGas.forEach(notes=>{
+                const xPoint=d3.event.transform.rescaleX(notes.xScaleToUSe)(notes.x);
+                const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
+                fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
+            });
+            noteLabelsOil.forEach(notes=>{
+                const xPoint=d3.event.transform.rescaleX(notes.xScaleToUSe)(notes.x);
+                const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
+                fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
+            });
+            yScaleWaterZoom=d3.event.transform.rescaleY(yScaleWater);
+            yScaleOilZoom=d3.event.transform.rescaleY(yScaleOil);
+            yScaleGasZoom=d3.event.transform.rescaleY(yScaleGas);
+            xScaleZoom=d3.event.transform.rescaleX(xScale);
+           
+            lasso_area
+            .on("click",null)
+            .on("mousemove",null)
+            .on("mouseout",null);
 
-
-            
-
+            lasso_area
+            .on("click",onLassoReactClick)
+            .on("mousemove",onLassoReactMouseMove)
+            .on("mouseout",onLassoReactMouseOut);
 
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-gas")
@@ -623,7 +654,7 @@
         function onLassoReactMouseMove(event){
             const allSelectedPoints=calculateDataOnClick(this);
             if(allSelectedPoints.length>0){
-                console.log(JSON.stringify(allSelectedPoints));
+                // console.log(JSON.stringify(allSelectedPoints));
                 let tooltipData = "";
                 let topLeftPositionOfTooltip = { topPosition: 100, leftPosition: 100 };
                 tooltipData = (
@@ -653,14 +684,85 @@
             
         }
         function onLassoReactMouseOut(event){
-            console.log("Event: Mouse Out");
+            // console.log("Event: Mouse Out");
             callHideTooltip(mainDivRef);
         }
 
         function onLassoReactClick(event){
             const allSelectedPoints=calculateDataOnClick(this);
-            if(allSelectedPoints.length>0)
-                alert(JSON.stringify(allSelectedPoints));
+            if(allSelectedPoints.length>0){
+                const labelValue=prompt("Enter Label Value to Be add");
+                let yScaleToUse=yScaleWaterZoom!=null ?  yScaleWaterZoom : yScaleWater;
+                let yScaleToUseCopy= yScaleWater;
+                if(allSelectedPoints[0].section=='Gas'){
+                    yScaleToUse=yScaleGasZoom!=null ?  yScaleGasZoom : yScaleGas;
+                    yScaleToUseCopy=yScaleGas;
+                }else if(allSelectedPoints[0].section=='Oil'){
+                    yScaleToUse=yScaleOilZoom!=null ?  yScaleOilZoom : yScaleOil;
+                    yScaleToUseCopy=yScaleOil;
+                }
+                const xScaleToUSe=xScaleZoom!=null ? xScaleZoom : xScale;
+                const xPoint=xScaleToUSe(allSelectedPoints[0].x);
+                const yPoint=yScaleToUse(allSelectedPoints[0].y);
+
+                console.log("Label Value is:","domain:",yScaleToUse.domain(),"\trange:",yScaleToUse.range(),
+                JSON.stringify(allSelectedPoints),"\tx:",xPoint,"\ty:",yPoint);
+                
+                const noteReact=d3.select(".area-for-note")
+                .append("rect")
+                .style("fill","white")
+                .style("stroke","#ccc");
+
+                const textNode=d3.select(".area-for-note")
+                .append("text")
+                .attr("dy","0.35em")
+                .attr("text-anchor","start")
+                .text(labelValue);
+                fixedPositionOfNote(noteReact,textNode,xPoint,yPoint);
+                if(allSelectedPoints[0].section=='Water'){
+                    noteLabelsWater.push({
+                        noteReact:noteReact,
+                        textNode:textNode,
+                        x:allSelectedPoints[0].x,
+                        y:allSelectedPoints[0].y,
+                        yScaleToUse:yScaleToUseCopy,
+                        xScaleToUSe:xScale
+                    })
+                }else if(allSelectedPoints[0].section=='Gas'){
+                    noteLabelsGas.push({
+                        noteReact:noteReact,
+                        textNode:textNode,
+                        x:allSelectedPoints[0].x,
+                        y:allSelectedPoints[0].y,
+                        yScaleToUse:yScaleToUseCopy,
+                        xScaleToUSe:xScale
+                    })
+                }else if(allSelectedPoints[0].section=='Oil'){
+                    noteLabelsOil.push({
+                        noteReact:noteReact,
+                        textNode:textNode,
+                        x:allSelectedPoints[0].x,
+                        y:allSelectedPoints[0].y,
+                        yScaleToUse:yScaleToUseCopy,
+                        xScaleToUSe:xScale
+                    })
+                }
+            }
+                // alert(JSON.stringify(allSelectedPoints));
+        }
+
+        function fixedPositionOfNote(noteReact,textNode,xPoint,yPoint){
+            const textNodeSize=textNode.node().getBBox();
+            const rectLeftPadding=5;
+            const rectTopPadding=10;
+            const extraSpaceToNote=10;
+
+            const textNodeYPosition=parseFloat(yPoint) + textNodeSize.width+extraSpaceToNote;
+            textNode.attr("transform",`translate(${xPoint},${textNodeYPosition+(rectTopPadding/2)}) rotate(270)`);
+            noteReact.attr("width",textNodeSize.height+(rectLeftPadding*2));
+            noteReact.attr("height",textNodeSize.width+(rectTopPadding*2));
+            noteReact.attr("x",xPoint - (textNodeSize.height / 2) - rectLeftPadding);
+            noteReact.attr("y",yPoint+(extraSpaceToNote/2))
         }
 
         function callShowTooltip(topPosition,leftPosition,childrenData,mainDivRef){
@@ -684,7 +786,7 @@
 
 
         function calculateDataOnClick(source){
-            console.log("Event:",d3.mouse(source),xScaleLasso.invert(d3.mouse(source)[0]));
+            // console.log("Event:",d3.mouse(source),xScaleLasso.invert(d3.mouse(source)[0]));
             const x=d3.mouse(source)[0];
             const y=d3.mouse(source)[1];
             const selectedPointsGas=[];
@@ -722,9 +824,9 @@
                     }
                 }
             })
-            console.log("selected Gas Data:",selectedPointsGas);
-            console.log("selected Water Data:",selectedPointsWater);
-            console.log("selected Oil Data:",selectedPointsOil);
+            // console.log("selected Gas Data:",selectedPointsGas);
+            // console.log("selected Water Data:",selectedPointsWater);
+            // console.log("selected Oil Data:",selectedPointsOil);
             
             const allSelectedPoints=[...selectedPointsGas,...selectedPointsWater,...selectedPointsOil];
             return allSelectedPoints;
@@ -741,6 +843,10 @@
             .on("click",onLassoReactClick)
             .on("mousemove",onLassoReactMouseMove)
             .on("mouseout",onLassoReactMouseOut);
+        
+        const areaForNotes=svgForLines
+        .append("g")
+        .attr("class",'area-for-note');
             
 
 
@@ -780,7 +886,7 @@
                 if (d != undefined)
                     data.push(d)
             })
-            console.log("Selected Items:", data);
+            // console.log("Selected Items:", data);
             lassoSelectedData = [...lassoSelectedData, ...data];
             lassoEndSelectionG.html('');
             lassoEndSelectionG
@@ -840,6 +946,13 @@
             const currentTransform = d3.event.transform;
             axisGWater.call(yAxisWater.scale(d3.event.transform.rescaleY(yScaleWater)));
 
+            noteLabelsWater.forEach(notes=>{
+                const xPoint=notes.xScaleToUSe(notes.x);
+                const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
+                fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
+            });
+            yScaleWaterZoom=d3.event.transform.rescaleY(yScaleWater);
+
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-water")
                 .attr("cx", d => xScale(d.x))
@@ -889,6 +1002,13 @@
             const currentTransform = d3.event.transform;
             axisGGas.call(yAxisGas.scale(d3.event.transform.rescaleY(yScaleGas)));
 
+            noteLabelsGas.forEach(notes=>{
+                const xPoint=notes.xScaleToUSe(notes.x);
+                const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
+                fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
+            });
+            yScaleGasZoom=d3.event.transform.rescaleY(yScaleGas);
+
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-gas")
                 .attr("cx", d => xScale(d.x))
@@ -937,6 +1057,13 @@
             const currentTransform = d3.event.transform;
             axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
 
+            noteLabelsOil.forEach(notes=>{
+                const xPoint=notes.xScaleToUSe(notes.x);
+                const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
+                fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
+            });
+            yScaleOilZoom=d3.event.transform.rescaleY(yScaleOil);
+
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-oil")
                 .attr("cx", d => xScale(d.x))
@@ -975,9 +1102,6 @@
             .style("left", margin.left); 
         
         //CBT:Pan Feature on each Y Axis End
-
-
-
 
 
         function drpFeatures_Changed() {
