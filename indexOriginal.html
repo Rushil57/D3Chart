@@ -176,6 +176,7 @@
     <script src="data.js"></script>
     <script src="d3-lasso.min.js"></script>
     <script>
+
         const mainDivRef = "#chart";
         const margin = {
             left: 80,
@@ -216,9 +217,11 @@
             oil.y = monthlyData[i].Oil;
             oil.section = "Oil";
             oil.colors = colors.oil;
-            allValues.push(monthlyData[i].Oil);
-            allDates.push(oil.x);
-            array_oil.push(oil);
+            if(monthlyData[i].Oil>0){
+                allValues.push(monthlyData[i].Oil);
+                allDates.push(oil.x);
+                array_oil.push(oil);
+            }
 
             let gas = {};
             gas.x = parseTime(monthlyData[i].DisplayDate);
@@ -226,9 +229,11 @@
             gas.y = monthlyData[i].Gas;
             gas.section = "Gas";
             gas.colors = colors.gas;
-            allValues.push(monthlyData[i].Gas);
-            allDates.push(gas.x);
-            array_gas.push(gas);
+            if(monthlyData[i].Gas>0){
+                allValues.push(monthlyData[i].Gas);
+                allDates.push(gas.x);
+                array_gas.push(gas);
+            }
 
             let water = {};
             water.x = parseTime(monthlyData[i].DisplayDate);
@@ -236,9 +241,11 @@
             water.y = monthlyData[i].Water;
             water.section = "Water";
             water.colors = colors.water;
-            allValues.push(monthlyData[i].Water);
-            allDates.push(water.x);
-            array_water.push(water);
+            if(monthlyData[i].Water>0){
+                allValues.push(monthlyData[i].Water);
+                allDates.push(water.x);
+                array_water.push(water);
+            }
         }
 
         const data = [];
@@ -251,6 +258,7 @@
         const waterMinMax = d3.extent(array_water.map(d => d.y));
         const overallMinMax = d3.extent([...oilMinMax, ...gasMinMax, ...waterMinMax]);
 
+        const waterOilMinMax=d3.extent([...oilMinMax, ...waterMinMax])
         const minDate = Math.min.apply(null, allDates);
         const maxDate = Math.max.apply(null, allDates);
         let xScaleZoom =null;
@@ -263,30 +271,30 @@
         const noteLabelsOil=[];
         let yScaleWaterZoom=null;
         const yScaleWater = d3.scaleLog()
-            .domain([waterMinMax[0] < 0.1 ? 0.1 : waterMinMax[0], waterMinMax[1]])
+            .domain([ waterOilMinMax[0], waterOilMinMax[1]])
             .range([chartHeight, 0]);
 
         let yScaleOilZoom=null;
         const yScaleOil = d3.scaleLog()
-            .domain([oilMinMax[0] < 0.1 ? 0.1 :oilMinMax[0], oilMinMax[1]])
+            .domain([waterOilMinMax[0], waterOilMinMax[1]])
             .range([chartHeight, 0]);
 
         let yScaleGasZoom=null;
         const yScaleGas = d3.scaleLog()
-            .domain([gasMinMax[0] < 0.1 ? 0.1 :gasMinMax[0], gasMinMax[1]])
+            .domain([gasMinMax[0], gasMinMax[1]])
             .range([chartHeight, 0]);
 
         const xScaleLasso=d3.scaleTime()
             .domain([minDate, maxDate])
             .range([0, chartWidth]);
         const yScaleGasLasso=d3.scaleLog()
-            .domain([gasMinMax[0] < 0.1 ? 0.1 :gasMinMax[0], gasMinMax[1]])
+            .domain([gasMinMax[0], gasMinMax[1]])
             .range([chartHeight, 0]);
         const yScaleOilLasso=d3.scaleLog()
-            .domain([oilMinMax[0] < 0.1 ? 0.1 :oilMinMax[0], oilMinMax[1]])
+            .domain([waterOilMinMax[0], waterOilMinMax[1]])
             .range([chartHeight, 0]);
         const yScaleWaterLasso=d3.scaleLog()
-            .domain([waterMinMax[0] < 0.1 ? 0.1 : waterMinMax[0], waterMinMax[1]])
+            .domain([ waterOilMinMax[0], waterOilMinMax[1]])
             .range([chartHeight, 0]);;
 
 
@@ -301,7 +309,8 @@
             .attr("width", chartWidth)
             .attr("height", chartHeight)
             .style("top", margin.top)
-            .style("left", margin.left*2);    
+            .style("left", margin.left*2);
+            
 
         const xAxis = d3.axisBottom(xScale);
 
@@ -331,7 +340,7 @@
             .attr("class", "y-axis-oil");
 
         axisGOil.attr("transform", `translate(${margin.left*2},${margin.top})`)
-            .call(yAxisOil.ticks(7,".2f"));
+            .call(yAxisOil.ticks(7,".2f").tickSize(-1 * chartWidth));
 
         axisGOil
             .append("text")
@@ -371,17 +380,17 @@
         const lineWater = d3.line()
             .curve(d3.curveStepBefore)
             .x(d => xScale(d.x))
-            .y(d => yScaleWater(d.y < 0.1 ? 0.1 : d.y));
+            .y(d => yScaleWater( d.y));
 
         const lineOil = d3.line()
             .curve(d3.curveStepBefore)
             .x(d => xScale(d.x))
-            .y(d => yScaleOil(d.y < 0.1 ? 0.1 : d.y));
+            .y(d => yScaleOil( d.y));
 
         const lineGas = d3.line()
             .curve(d3.curveStepBefore)
             .x(d => xScale(d.x))
-            .y(d => yScaleGas(d.y < 0.1 ? 0.1 :d.y));
+            .y(d => yScaleGas(d.y));
 
         const circleRadius = 3;
 
@@ -402,7 +411,7 @@
             .datum(d => d)
             .attr("data", d => JSON.stringify(d))
             .attr("cx", d => xScale(d.x))
-            .attr("cy", d => yScaleWater(d.y < 0.1 ? 0.1 : d.y))
+            .attr("cy", d => yScaleWater( d.y))
             .attr("r", circleRadius)
             .style("fill", d => d.colors);
 
@@ -424,7 +433,7 @@
             .datum(d => d)
             .attr("data", d => JSON.stringify(d))
             .attr("cx", d => xScale(d.x))
-            .attr("cy", d => yScaleOil(d.y < 0.1 ? 0.1 : d.y))
+            .attr("cy", d => yScaleOil( d.y))
             .attr("r", circleRadius)
             .style("fill", d => d.colors);
 
@@ -446,7 +455,7 @@
             .datum(d => d)
             .attr("data", d => JSON.stringify(d))
             .attr("cx", d => xScale(d.x))
-            .attr("cy", d => yScaleGas(d.y < 0.1 ? 0.1 :d.y))
+            .attr("cy", d => yScaleGas(d.y))
             .attr("r", circleRadius)
             .style("fill", d => d.colors);
 
@@ -470,7 +479,8 @@
             oil.y = dailyData[i].Oil;
             oil.section = "Oil";
             oil.colors = colors.oil;
-            array_oil_daily.push(oil);
+            if(dailyData[i].Oil>0)
+                array_oil_daily.push(oil);
 
             let gas = {};
             gas.x = parseTime(dailyData[i].DisplayDate);
@@ -478,7 +488,8 @@
             gas.y = dailyData[i].Gas;
             gas.section = "Gas";
             gas.colors = colors.gas;
-            array_gas_daily.push(gas);
+            if(dailyData[i].gas>0)
+                array_gas_daily.push(gas);
 
             let water = {};
             water.x = parseTime(dailyData[i].DisplayDate);
@@ -486,7 +497,8 @@
             water.y = dailyData[i].Water;
             water.section = "Water";
             water.colors = colors.water;
-            array_water_daily.push(water);
+            if(dailyData[i].water>0)
+             array_water_daily.push(water);
         }
 
         const daily_data_all = [...array_gas_daily, ...array_oil_daily, ...array_water_daily];
@@ -499,11 +511,11 @@
             .attr("cx", d => xScale(d.x))
             .attr("cy", d => {
                 if (d.section.toLowerCase() == 'oil')
-                    return yScaleOil(d.y < 0.1 ? 0.1 : d.y)
+                    return yScaleOil( d.y)
                 else if (d.section.toLowerCase() == 'gas')
-                    return yScaleGas(d.y < 0.1 ? 0.1 :d.y)
+                    return yScaleGas(d.y)
                 else if (d.section.toLowerCase() == 'water')
-                    return yScaleWater(d.y < 0.1 ? 0.1 : d.y)
+                    return yScaleWater( d.y)
             })
             .attr("class", d => {
                 if (d.section.toLowerCase() == 'oil')
@@ -570,16 +582,16 @@
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-gas")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)( d.y));
 
             d3.select(".daily-data-container").selectAll(".circle-daily-oil")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)( d.y));
 
 
             d3.select(".daily-data-container").selectAll(".circle-daily-water")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)( d.y));
 
             //CBT:daily data zoom end
 
@@ -587,27 +599,27 @@
 
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(( d.y) * lassoMultiplier));
 
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(( d.y) * lassoMultiplier));
 
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-water")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(( d.y) * lassoMultiplier));
 
             //CBT:lasso data zoom end
 
 
             d3.select(".line-gas").selectAll("circle")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)( d.y));
 
             const updatedLineGas = d3.line()
                 .curve(d3.curveStepBefore)
                 .x(d => (d3.event.transform.rescaleX(xScale)(d.x)))
-                .y(d => d3.event.transform.rescaleY(yScaleGas)(d.y < 0.1 ? 0.1 : d.y));
+                .y(d => d3.event.transform.rescaleY(yScaleGas)( d.y));
 
             d3.select(".line-gas")
                 .select("path")
@@ -616,12 +628,12 @@
 
             d3.select(".line-water").selectAll("circle")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)( d.y));
 
             const updatedLineWater = d3.line()
                 .curve(d3.curveStepBefore)
                 .x(d => (d3.event.transform.rescaleX(xScale)(d.x)))
-                .y(d => d3.event.transform.rescaleY(yScaleWater)(d.y < 0.1 ? 0.1 : d.y));
+                .y(d => d3.event.transform.rescaleY(yScaleWater)( d.y));
 
             d3.select(".line-water")
                 .select("path")
@@ -630,12 +642,12 @@
 
             d3.select(".line-oil").selectAll("circle")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)( d.y));
 
             const updatedLineOil = d3.line()
                 .curve(d3.curveStepBefore)
                 .x(d => (d3.event.transform.rescaleX(xScale)(d.x)))
-                .y(d => d3.event.transform.rescaleY(yScaleOil)(d.y < 0.1 ? 0.1 : d.y));
+                .y(d => d3.event.transform.rescaleY(yScaleOil)( d.y));
 
             d3.select(".line-oil")
                 .select("path")
@@ -810,7 +822,7 @@
 
                 if(data!=undefined && data.section.toLowerCase()=='water'){
                     const cx=xScaleLasso(data.x);
-                    const cy=yScaleWaterLasso(data.y < 0.1 ? 0.1 : data.y);
+                    const cy=yScaleWaterLasso(data.y);
                     if(xValue>=(cx-circleRadius) && xValue<=(cx+circleRadius) && yValueWater>=(cy-circleRadius) && yValueWater<=(cy+circleRadius)){
                         selectedPointsWater.push(data);
                     }
@@ -818,7 +830,7 @@
 
                 if(data!=undefined && data.section.toLowerCase()=='oil'){
                     const cx=xScaleLasso(data.x);
-                    const cy=yScaleOilLasso(data.y < 0.1 ? 0.1 : data.y);
+                    const cy=yScaleOilLasso(data.y);
                     if(xValue>=(cx-circleRadius) && xValue<=(cx+circleRadius) && yValueOil>=(cy-circleRadius) && yValueOil<=(cy+circleRadius)){
                         selectedPointsOil.push(data);
                     }
@@ -898,11 +910,11 @@
                 .attr("cx", d => xScaleLasso(d.x))
                 .attr("cy", d => {
                     if (d.section.toLowerCase() == 'oil')
-                        return yScaleOilLasso((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier)
+                        return yScaleOilLasso(( d.y) * lassoMultiplier)
                     else if (d.section.toLowerCase() == 'gas')
                         return yScaleGasLasso(d.y * lassoMultiplier)
                     else if (d.section.toLowerCase() == 'water')
-                        return yScaleWaterLasso((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier)
+                        return yScaleWaterLasso(( d.y) * lassoMultiplier)
                 })
                 .attr("class", d => {
                     if (d.section.toLowerCase() == 'oil')
@@ -956,24 +968,24 @@
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-water")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)( d.y));
 
             //CBT:daily data zoom end
 
             //CBT:lasso data zoom start
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-water")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(( d.y) * lassoMultiplier));
 
             //CBT:lasso data zoom end
             d3.select(".line-water").selectAll("circle")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)( d.y));
 
             const updatedLineWater = d3.line()
                 .curve(d3.curveStepBefore)
                 .x(d => (xScale(d.x)))
-                .y(d => d3.event.transform.rescaleY(yScaleWater)(d.y < 0.1 ? 0.1 : d.y));
+                .y(d => d3.event.transform.rescaleY(yScaleWater)( d.y));
 
             d3.select(".line-water")
                 .select("path")
@@ -1012,23 +1024,23 @@
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-gas")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)( d.y));
             //CBT:daily data zoom end
 
             //CBT:lasso data zoom start
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(( d.y) * lassoMultiplier));
             //CBT:lasso data zoom end
 
             d3.select(".line-gas").selectAll("circle")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)( d.y));
 
             const updatedLineGas = d3.line()
                 .curve(d3.curveStepBefore)
                 .x(d => (xScale(d.x)))
-                .y(d => d3.event.transform.rescaleY(yScaleGas)(d.y < 0.1 ? 0.1 : d.y));
+                .y(d => d3.event.transform.rescaleY(yScaleGas)( d.y));
 
             d3.select(".line-gas")
                 .select("path")
@@ -1067,23 +1079,23 @@
             //CBT:daily data zoom start
             d3.select(".daily-data-container").selectAll(".circle-daily-oil")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)( d.y));
             //CBT:daily data zoom end
 
             //CBT:lasso data zoom start
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)((d.y < 0.1 ? 0.1 : d.y) * lassoMultiplier));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(( d.y) * lassoMultiplier));
 
             //CBT:lasso data zoom end
             d3.select(".line-oil").selectAll("circle")
                 .attr("cx", d => xScale(d.x))
-                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(d.y < 0.1 ? 0.1 : d.y));
+                .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)( d.y));
 
             const updatedLineOil = d3.line()
                 .curve(d3.curveStepBefore)
                 .x(d => (xScale(d.x)))
-                .y(d => d3.event.transform.rescaleY(yScaleOil)(d.y < 0.1 ? 0.1 : d.y));
+                .y(d => d3.event.transform.rescaleY(yScaleOil)( d.y));
 
             d3.select(".line-oil")
                 .select("path")
