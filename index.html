@@ -156,10 +156,10 @@
     <div class="text-center">
         <div id="chart" oncontextmenu="return false;"></div>
         <div class="cls-drp-feature">
-            <select id="drpFeatures" onchange="drpFeatures_Changed()">
+            <!-- <select id="drpFeatures" onchange="drpFeatures_Changed()">
                 <option value="lasso"> Lasso</option>
-                <option value="zoom"> Zoom</option>
-            </select>
+                <option value="zoom" selected> Zoom</option>
+            </select> -->
             <div class="legend">
                 <div class='legend-container'>
                     <div class="line-rect" style="background: steelblue;"></div><span class="text-label">Monthly
@@ -319,7 +319,7 @@
             .attr("class", "y-axis-water");
 
         axisGWater.attr("transform", `translate(${margin.left},${margin.top})`)
-            .call(yAxisWater.ticks(7,".2f"));
+            .call(yAxisWater.ticks(7,".0f"));
 
         axisGWater
             .append("text")
@@ -335,7 +335,7 @@
             .attr("class", "y-axis-oil");
 
         axisGOil.attr("transform", `translate(${margin.left*2},${margin.top})`)
-            .call(yAxisOil.ticks(7,".2f").tickSize(-1 * chartWidth));
+            .call(yAxisOil.ticks(7,".0f").tickSize(-1 * chartWidth));
 
         axisGOil
             .append("text")
@@ -349,7 +349,7 @@
             .attr("class", "y-axis-gas");
 
         axisGGas.attr("transform", `translate(${width-margin.right},${margin.top})`)
-            .call(yAxisGas.ticks(7,".2f"));
+            .call(yAxisGas.ticks(7,".0f"));
 
         axisGGas
             .append("text")
@@ -576,7 +576,14 @@
                 }
                 return;//Return when cntl key was pressed and mouse move
             }
-            if(($("#drpFeatures").val() == "zoom") && (mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
+            if(d3.event.altKey==true){
+                d3.selectAll(".lasso").remove();
+                zoom_area.on('.zoom', null);
+                zoom_area.style("pointer-events", "none");
+                svgForLines.call(lasso);
+                lasso.items(d3.selectAll("circle"));
+            }
+            if((mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
                 return [];
             }
             const allSelectedPoints=calculateDataOnClick(this);
@@ -624,13 +631,19 @@
                     .attr("x",mousePoint[0])
                     .attr("y",mousePoint[1]);
             }
+            if(d3.event.altKey==true){
+                d3.selectAll(".lasso").remove();
+                zoom_area.on('.zoom', null);
+                zoom_area.style("pointer-events", "none");
+                svgForLines.call(lasso);
+                lasso.items(d3.selectAll("circle"));
+            }
         }
 
         function onLassoReactMouseUp(event){
             // console.log("onLassoReactMouseUp",d3.event.ctrlKey);
-           
             if(d3.event.ctrlKey){
-                const marginLeft=(($("#drpFeatures").val() == "zoom") ? (margin.left*2) : 0);
+                const marginLeft=(margin.left*2);
                 const startX=zoom_select_rect.attr("x");
                 const startY=zoom_select_rect.attr("y");
                 const widthOfRect=Math.abs(zoom_select_rect.attr("width"))+Math.abs(startX)-marginLeft;
@@ -652,6 +665,9 @@
                     zoomPanWaterOnlyOnRect(xScaleToUSe,yScaleToUSeWater,yScaleToUSeOil,yScaleToUSeGas);
                 }
             }
+            zoom_area.style("pointer-events", "all");
+            zoom_area.on('.zoom', null);
+            zoom_area.call(zoom);  
             zoom_select_rect
                     .attr("x",null)
                     .attr("y",null)
@@ -703,7 +719,7 @@
             const mousePoint=d3.mouse(this);
             if(d3.event.ctrlKey==true)
                 return;//Return when cntl key was pressed and mouse clicked
-            if(($("#drpFeatures").val() == "zoom") && (mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
+            if((mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
                 return [];
             }
             const allSelectedPoints=calculateDataOnClick(this);
@@ -725,9 +741,6 @@
                 const xPoint=xScaleToUSe(allSelectedPoints[0].x);
                 const yPoint=yScaleToUse(allSelectedPoints[0].y);
 
-                // console.log("Label Value is:","domain:",yScaleToUse.domain(),"\trange:",yScaleToUse.range(),
-                // JSON.stringify(allSelectedPoints),"\tx:",xPoint,"\ty:",yPoint);
-                
                 const noteReact=d3.select(".area-for-note")
                 .append("rect")
                 .style("fill","white")
@@ -807,10 +820,10 @@
 
         function calculateDataOnClick(source){
             const mousePoint=d3.mouse(source);
-            if(($("#drpFeatures").val() == "zoom") && (mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
+            if((mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
                 return [];
             }
-            const x=mousePoint[0]-(($("#drpFeatures").val() == "zoom") ? (margin.left*2) : 0);
+            const x=mousePoint[0]-(margin.left*2);
             const y=mousePoint[1];
             // console.log("data:",x,y);
             const selectedPointsGas=[];
@@ -891,6 +904,12 @@
         
 
         var lasso_end = function () {
+            console.log("lasso_end");
+            zoom_area.transition().duration(10).style("pointer-events", "all");
+            zoom_area.on('.zoom', null);
+            zoom_area.call(zoom);  
+           
+            console.log(zoom_area);
             // Reset the color of all dots
             lasso.items()
                 .classed("not_possible", false)
@@ -953,14 +972,70 @@
         .filter(function () {
             return (d3.event.button === 1 || d3.event.button === 2 || (d3.event.type=='wheel' && d3.event.button === 0))
         })
-        .on("zoom", updateChart);
+        .on("zoom", updateChart)
+        .on("end", updateChartZoomEnd)
+        .on("start", updateChartZoomStart);
+
+        let zoomtransformYWater={
+            x:0,y:0,k:1
+        },zoomtransformYGas={
+            x:0,y:0,k:1
+        },zoomtransformYOil={
+            x:0,y:0,k:1
+        };
+        let flagForZoom=0;
+        let initZoom=0;
+        function updateChartZoomEnd(){
+            console.log("zoom end:");
+            const mousePoint=d3.mouse(this);
+            if(flagForZoom==1){
+                initZoom=1;
+                flagForZoom=0;
+            }else{
+                initZoom=0; 
+            }
+            
+            const data=d3.zoomTransform(zoom_area.node());
+            if(mousePoint[0]<0 || mousePoint[0]>1000){
+                return;
+            }else if(mousePoint[0]>0 && mousePoint[0]<=80 && mousePoint[1]> 0 && mousePoint[1]< 530){
+                zoomtransformYWater=d3.event.transform;
+            }else if(mousePoint[0]>80 && mousePoint[0]<=160 && mousePoint[1]> 0 && mousePoint[1]< 530){
+                zoomtransformYOil=d3.event.transform;
+            }else if(mousePoint[0]>920 && mousePoint[0]<=1000 && mousePoint[1]> 0  && mousePoint[1]< 530){
+                zoomtransformYGas=d3.event.transform;
+            }
+
+        }
+
+        function updateChartZoomStart(){
+            if(initZoom==0){
+                flagForZoom=1;
+            }
+            console.log("zoom start:");
+            const mousePoint=d3.mouse(this);
+            if(mousePoint[0]<0 || mousePoint[0]>1000){
+                    return;
+            }else if(mousePoint[0]>0 && mousePoint[0]<=80 && mousePoint[1]> 0 && mousePoint[1]< 530){
+                console.log("Reset Water:",zoomtransformYWater);
+                zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYWater.x,zoomtransformYWater.y).scale(zoomtransformYWater.k));
+            }else if(mousePoint[0]>80 && mousePoint[0]<=160 && mousePoint[1]> 0 && mousePoint[1]< 530){
+                console.log("Reset Oil:",zoomtransformYOil);
+                zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYOil.x,zoomtransformYOil.y).scale(zoomtransformYOil.k));
+            }else if(mousePoint[0]>160 && mousePoint[0]<=920 && mousePoint[1]> 0  && mousePoint[1]< 530){
+                //Center
+            }
+            else if(mousePoint[0]>920 && mousePoint[0]<=1000 && mousePoint[1]> 0  && mousePoint[1]< 530){
+                console.log("Reset Gas:",zoomtransformYGas);
+                zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYGas.x,zoomtransformYGas.y).scale(zoomtransformYGas.k));
+            }
+        }
 
         function updateChart(){
-            if ($("#drpFeatures").val() != "zoom")
-                return;
             const mousePoint=d3.mouse(this);
             // console.log("mousePoint:",mousePoint);
             const currentTransform = d3.event.transform;
+            console.log("currentTransform",currentTransform);
             if(mousePoint[0]<0 || mousePoint[0]>1000){
                 return;
             }else if(mousePoint[0]>0 && mousePoint[0]<=80 && mousePoint[1]> 0 && mousePoint[1]< 530){
@@ -1272,13 +1347,14 @@
 
         function zoomPanWaterOnly(){
             //Water Start
+            // const yScaleToUSeWater=yScaleWaterZoom!=null ? yScaleWaterZoom : yScaleWater;
             axisGWater.call(yAxisWater.scale(d3.event.transform.rescaleY(yScaleWater)));
             noteLabelsWater.forEach(notes=>{
                 const xPoint=d3.event.transform.rescaleX(notes.xScaleToUSe)(notes.x);
                 const yPoint=d3.event.transform.rescaleY(notes.yScaleToUse)(notes.y);
                 fixedPositionOfNote(notes.noteReact,notes.textNode,xPoint,yPoint);
             });
-            yScaleWaterZoom=d3.event.transform.rescaleY(yScaleWater);
+            
             d3.select(".daily-data-container").selectAll(".circle-daily-water")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
                 .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)( d.y));
@@ -1299,6 +1375,7 @@
                 .select("path")
                 .attr("d", updatedLineWater);
             yScaleWaterLasso.domain(d3.event.transform.rescaleY(yScaleWater).domain()); 
+            yScaleWaterZoom=d3.event.transform.rescaleY(yScaleWater);
             //Water End
         }
         
@@ -1400,26 +1477,9 @@
             yScaleGasLasso.domain(yScaleToUSeGas.domain()); 
                 // GAS End
         }
-        
-        //CBT:Pan Feature on each Y Axis End
-        function drpFeatures_Changed() {
-            // lassoEndSelectionG.html('');
-            if ($("#drpFeatures").val() == "zoom") {
-                lasso_area.on(".dragstart", null);
-                lasso_area.on(".drag", null);
-                lasso_area.on(".dragend", null);
-                zoom_area.style("pointer-events", "all");
-                zoom_area.call(zoom);   
-            } else {
-                zoom_area.on('.zoom', null);
-                zoom_area.style("pointer-events", "none");
-                svgForLines.call(lasso);
-                lasso.items(d3.selectAll("circle"));
-            }
-        }
-
-        drpFeatures_Changed();
-
+        svgForLines.call(lasso);
+        zoom_area.on('.zoom', null);
+        zoom_area.call(zoom); 
         
     </script>
 </body>
