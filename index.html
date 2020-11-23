@@ -156,10 +156,6 @@
     <div class="text-center">
         <div id="chart" oncontextmenu="return false;"></div>
         <div class="cls-drp-feature">
-            <!-- <select id="drpFeatures" onchange="drpFeatures_Changed()">
-                <option value="lasso"> Lasso</option>
-                <option value="zoom" selected> Zoom</option>
-            </select> -->
             <div class="legend">
                 <div class='legend-container'>
                     <div class="line-rect" style="background: steelblue;"></div><span class="text-label">Monthly
@@ -190,14 +186,17 @@
         };
         const width = 1000;
         const height = 600;
-        const chartWidth = width - ((margin.left * 2) + margin.right);
+        const widthForWaterOilYAxis=margin.left * 2;
+        const chartWidth = width - (widthForWaterOilYAxis + margin.right);
         const chartHeight = height - (margin.top + margin.bottom);
         const lassoMultiplier=5;
+        const widthForMiddleAreaWithWaterOilYAxis=chartWidth+widthForWaterOilYAxis;
+        const heightForMiddleAreaWithMarginBottom=height-margin.top;
+
+        console.log(widthForWaterOilYAxis,widthForMiddleAreaWithWaterOilYAxis,chartHeight) ; 
 
         let monthlyData = chartData;
         const array_oil = [];
-
-
         const colors = {
             oil: 'steelblue',
             gas: 'green',
@@ -334,7 +333,7 @@
         const axisGOil = svg.append("g")
             .attr("class", "y-axis-oil");
 
-        axisGOil.attr("transform", `translate(${margin.left*2},${margin.top})`)
+        axisGOil.attr("transform", `translate(${widthForWaterOilYAxis},${margin.top})`)
             .call(yAxisOil.ticks(7,".0f").tickSize(-1 * chartWidth));
 
         axisGOil
@@ -361,14 +360,14 @@
 
         const axisGXAxis = svg.append("g")
             .attr("class", "x-axis")
-            .attr("transform", `translate(${(margin.left*2)},${(height-(margin.bottom))})`);
+            .attr("transform", `translate(${(widthForWaterOilYAxis)},${(height-(margin.bottom))})`);
 
         axisGXAxis.call(xAxis);
 
         axisGXAxis.append("text")
             .attr("class", "axis-label-xaxis")
             .attr("y", margin.bottom * 0.8)
-            .attr("x", ((width) / 2) - (margin.left * 2))
+            .attr("x", ((width) / 2) - (widthForWaterOilYAxis))
             .text('Date');
 
 
@@ -401,11 +400,11 @@
             .append("g")
             .attr("class","svg-with-line")
             .attr("clip-path", "url(#clip)")
-            .attr("transform",`translate(${ margin.left*2},${ margin.top})`);
+            .attr("transform",`translate(${ widthForWaterOilYAxis},${ margin.top})`);
 
         const lineWaterG = svgForLines.append("g")
             .attr("class", 'line-water')
-            .attr("transform", `translate(${0},${0})`);
+            .attr("transform", `translate(0,0)`);
 
         lineWaterG
             .append("path")
@@ -427,7 +426,7 @@
 
         const lineOilG = svgForLines.append("g")
             .attr("class", 'line-oil')
-            .attr("transform", `translate(${0},${0})`);
+            .attr("transform", `translate(0,0)`);
 
         lineOilG
             .append("path")
@@ -449,7 +448,7 @@
 
         const lineGasG = svgForLines.append("g")
             .attr("class", 'line-gas')
-            .attr("transform", `translate(${0},${0})`);
+            .attr("transform", `translate(0,0)`);
 
         lineGasG
             .append("path")
@@ -471,12 +470,12 @@
 
         const lassoEndSelectionG = svg.append("g")
             .attr("class", "lasso-selected-container")
-            .attr("transform", `translate(${margin.left*2},${margin.top})`);
+            .attr("transform", `translate(${widthForWaterOilYAxis},${margin.top})`);
 
         //CBT:Daily Data Plotting start
         const dailyDataG = svgForLines.append("g")
             .attr("class", "daily-data-container")
-            .attr("transform", `translate(${0},${0})`);
+            .attr("transform", `translate(0,0)`);
 
         const array_gas_daily = [];
         const array_water_daily = [];
@@ -493,7 +492,6 @@
 
             let gas = {};
             gas.x = parseTime(dailyData[i].DisplayDate);
-            //gas.x = (i + 1);
             gas.y = dailyData[i].Gas;
             gas.section = "Gas";
             gas.colors = colors.gas;
@@ -502,7 +500,6 @@
 
             let water = {};
             water.x = parseTime(dailyData[i].DisplayDate);
-            //water.x = (i + 1);
             water.y = dailyData[i].Water;
             water.section = "Water";
             water.colors = colors.water;
@@ -564,6 +561,7 @@
             .append("rect")
             .attr("class","zoom-select-rect");
 
+          
         function onLassoReactMouseMove(event){
             const mousePoint=d3.mouse(this);
             if(d3.event.ctrlKey==true){
@@ -583,7 +581,7 @@
                 svgForLines.call(lasso);
                 lasso.items(d3.selectAll("circle"));
             }
-            if((mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
+            if((mousePoint[0]<widthForWaterOilYAxis || mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis || mousePoint[1]>chartHeight)){
                 return [];
             }
             const allSelectedPoints=calculateDataOnClick(this);
@@ -643,7 +641,7 @@
         function onLassoReactMouseUp(event){
             // console.log("onLassoReactMouseUp",d3.event.ctrlKey);
             if(d3.event.ctrlKey){
-                const marginLeft=(margin.left*2);
+                const marginLeft=(widthForWaterOilYAxis);
                 const startX=zoom_select_rect.attr("x");
                 const startY=zoom_select_rect.attr("y");
                 const widthOfRect=Math.abs(zoom_select_rect.attr("width"))+Math.abs(startX)-marginLeft;
@@ -719,7 +717,7 @@
             const mousePoint=d3.mouse(this);
             if(d3.event.ctrlKey==true)
                 return;//Return when cntl key was pressed and mouse clicked
-            if((mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
+            if((mousePoint[0]<widthForWaterOilYAxis || mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis || mousePoint[1]>chartHeight)){
                 return [];
             }
             const allSelectedPoints=calculateDataOnClick(this);
@@ -781,7 +779,6 @@
                     })
                 }
             }
-                // alert(JSON.stringify(allSelectedPoints));
         }
 
         function fixedPositionOfNote(noteReact,textNode,xPoint,yPoint){
@@ -820,10 +817,10 @@
 
         function calculateDataOnClick(source){
             const mousePoint=d3.mouse(source);
-            if((mousePoint[0]<160 || mousePoint[0]>920 || mousePoint[1]>530)){
+            if((mousePoint[0]<widthForWaterOilYAxis || mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis || mousePoint[1]>chartHeight)){
                 return [];
             }
-            const x=mousePoint[0]-(margin.left*2);
+            const x=mousePoint[0]-(widthForWaterOilYAxis);
             const y=mousePoint[1];
             // console.log("data:",x,y);
             const selectedPointsGas=[];
@@ -870,10 +867,7 @@
             .attr("y", 0)
             .attr("width", chartWidth)
             .attr("height", chartHeight)
-            .style("opacity", 0)
-            .on("click",onLassoReactClick)
-            .on("mousemove",onLassoReactMouseMove)
-            .on("mouseout",onLassoReactMouseOut);
+            .style("opacity", 0);
         
         const areaForNotes=svgForLines
         .append("g")
@@ -900,8 +894,6 @@
                 .classed("possible", false);
         };
         let lassoSelectedData = [];
-
-        
 
         var lasso_end = function () {
             console.log("lasso_end");
@@ -958,13 +950,10 @@
             .closePathSelect(true)
             .closePathDistance(100)
             .items(d3.selectAll("circle"))
-            // .targetArea(zoom_area)
             .targetArea(lasso_area)
             .on("start", lasso_start)
             .on("draw", lasso_draw)
             .on("end", lasso_end);
-
-        // svgForLines.call(lasso);
 
         var zoom = d3.zoom()
         .scaleExtent([-10, 20])  // This control how much you can unzoom (x0.5) and zoom (x20)
@@ -996,16 +985,15 @@
             }
             
             const data=d3.zoomTransform(zoom_area.node());
-            if(mousePoint[0]<0 || mousePoint[0]>1000){
+            if(mousePoint[0]<0 || mousePoint[0]>width){
                 return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=80 && mousePoint[1]> 0 && mousePoint[1]< 530){
+            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 zoomtransformYWater=d3.event.transform;
-            }else if(mousePoint[0]>80 && mousePoint[0]<=160 && mousePoint[1]> 0 && mousePoint[1]< 530){
+            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 zoomtransformYOil=d3.event.transform;
-            }else if(mousePoint[0]>920 && mousePoint[0]<=1000 && mousePoint[1]> 0  && mousePoint[1]< 530){
+            }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 zoomtransformYGas=d3.event.transform;
             }
-
         }
 
         function updateChartZoomStart(){
@@ -1014,18 +1002,18 @@
             }
             console.log("zoom start:");
             const mousePoint=d3.mouse(this);
-            if(mousePoint[0]<0 || mousePoint[0]>1000){
+            if(mousePoint[0]<0 || mousePoint[0]>width){
                     return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=80 && mousePoint[1]> 0 && mousePoint[1]< 530){
+            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 console.log("Reset Water:",zoomtransformYWater);
                 zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYWater.x,zoomtransformYWater.y).scale(zoomtransformYWater.k));
-            }else if(mousePoint[0]>80 && mousePoint[0]<=160 && mousePoint[1]> 0 && mousePoint[1]< 530){
+            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 console.log("Reset Oil:",zoomtransformYOil);
                 zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYOil.x,zoomtransformYOil.y).scale(zoomtransformYOil.k));
-            }else if(mousePoint[0]>160 && mousePoint[0]<=920 && mousePoint[1]> 0  && mousePoint[1]< 530){
+            }else if(mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 //Center
             }
-            else if(mousePoint[0]>920 && mousePoint[0]<=1000 && mousePoint[1]> 0  && mousePoint[1]< 530){
+            else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 console.log("Reset Gas:",zoomtransformYGas);
                 zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYGas.x,zoomtransformYGas.y).scale(zoomtransformYGas.k));
             }
@@ -1036,35 +1024,24 @@
             // console.log("mousePoint:",mousePoint);
             const currentTransform = d3.event.transform;
             console.log("currentTransform",currentTransform);
-            if(mousePoint[0]<0 || mousePoint[0]>1000){
+            if(mousePoint[0]<0 || mousePoint[0]>width){
                 return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=80 && mousePoint[1]> 0 && mousePoint[1]< 530){
+            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 zoomPanWaterOnlyYAxis();
-            }else if(mousePoint[0]>80 && mousePoint[0]<=160 && mousePoint[1]> 0 && mousePoint[1]< 530){
+            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 zoomPanOilOnlyYAxis();
-            }else if(mousePoint[0]>160 && mousePoint[0]<=920 && mousePoint[1]> 0  && mousePoint[1]< 530){
+            }else if(mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 axisGXAxis.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
                 xScaleLasso.domain(d3.event.transform.rescaleX(xScale).domain());
                 xScaleZoom=d3.event.transform.rescaleX(xScale);
                 zoomPanWaterOnly();
                 zoomPanOilOnly();
                 zoomPanGasOnly();
-            }else if(mousePoint[0]>920 && mousePoint[0]<=1000 && mousePoint[1]> 0  && mousePoint[1]< 530){
+            }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 zoomPanGasOnlyYAxis();
-            }else if( mousePoint[1] > 530 && mousePoint[1] < 580 && mousePoint[0]>160 && mousePoint[0]<920 ){
+            }else if( mousePoint[1] > widthForWaterOilYAxis && mousePoint[1] < heightForMiddleAreaWithMarginBottom && mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<widthForMiddleAreaWithWaterOilYAxis ){
                 zoomOnlyXAxis();
             }
-
-            lasso_area
-            .on("click",null)
-            .on("mousemove",null)
-            .on("mouseout",null);
-
-            lasso_area
-            .on("click",onLassoReactClick)
-            .on("mousemove",onLassoReactMouseMove)
-            .on("mouseout",onLassoReactMouseOut);
-
         }
 
         function zoomOnlyXAxis(){
