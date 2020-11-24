@@ -989,6 +989,7 @@
                 return;
             }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 zoomtransformYWater=d3.event.transform;
+                console.log("zoomtransformYWater:",zoomtransformYWater);
             }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 zoomtransformYOil=d3.event.transform;
             }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
@@ -1021,9 +1022,20 @@
 
         function updateChart(){
             const mousePoint=d3.mouse(this);
+            if(mousePoint[0]<0 || mousePoint[0]>width){
+                return;
+            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+                zoomtransformYWater=d3.event.transform;
+            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+                zoomtransformYOil=d3.event.transform;
+            }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+                zoomtransformYGas=d3.event.transform;
+            }
+
+            
             // console.log("mousePoint:",mousePoint);
             const currentTransform = d3.event.transform;
-            console.log("currentTransform",currentTransform);
+            // console.log("currentTransform",currentTransform);
             if(mousePoint[0]<0 || mousePoint[0]>width){
                 return;
             }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
