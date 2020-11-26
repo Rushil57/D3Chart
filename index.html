@@ -673,8 +673,6 @@
                     .attr("height",null);
         }
         function onLassoDoubleReactClick(){
-            console.log("onLassoDoubleReactClick:");
-            zoom_area.call(zoom.transform,d3.zoomIdentity);
             xScale = d3.scaleTime()
             .domain([minDate, maxDate])
             .range([0, chartWidth]);
@@ -712,6 +710,7 @@
             zoom_area.on('.zoom', null);
             zoom_area.style("pointer-events", "all");
             zoom_area.call(zoom);
+            zoom_area.call(zoom.transform,d3.zoomIdentity);
         }
         function onLassoReactClick(event){
             const mousePoint=d3.mouse(this);
