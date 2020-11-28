@@ -387,6 +387,7 @@
             .y(d => yScaleGas(d.y));
 
         const circleRadius = 3;
+        const selectedLassoRect='orange';
 
         var clip = svg.append("defs").append("SVG:clipPath")
             .attr("id", "clip")
@@ -535,22 +536,34 @@
             .style("fill", d => d.colors);
 
         //CBT:Daily Data Plotting end
+        var zoomdefination = d3.zoom()
+        .scaleExtent([-10, 20])  // This control how much you can unzoom (x0.5) and zoom (x20)
+        .extent([[0, 0], [chartWidth, chartHeight]])
+        .filter(function () {
+            console.log(d3.event.button,d3.event.type);
+            return (d3.event.button == 1 || d3.event.button == 2 || (d3.event.type=='wheel' && d3.event.button == 0))
+        })
+        .on("zoom", updateChart)
+        .on("end", updateChartZoomEnd)
+        .on("start", updateChartZoomStart);
 
-
-        const zoom_area = svg
+        let zoom_area = svg
             .append("rect")
             .attr("class","zoom-area-rect")
+            .attr("id","zoom-area-rect-id")
             .attr("transform", `translate(0,${margin.top})`)
             .attr("width", width)
             .attr("height", height-margin.top)
             .style("fill", 'none')
+            .style("pointer-events", "all")
             .on("dblclick",onLassoDoubleReactClick)
             .on("click",onLassoReactClick)
             .on("mousemove",onLassoReactMouseMove)
             .on("mouseout",onLassoReactMouseOut)
             .on("mousedown",onLassoReactMouseDown)
-            .on("mouseup",onLassoReactMouseUp)
-            .style("pointer-events", "all");
+            .on("mouseup",onLassoReactMouseUp);
+            
+        zoom_area.call(zoomdefination); 
 
         const box_for_select_area=svg
             .append("g")
@@ -665,7 +678,7 @@
             }
             zoom_area.style("pointer-events", "all");
             zoom_area.on('.zoom', null);
-            zoom_area.call(zoom);  
+            zoom_area.call(zoomdefination);  
             zoom_select_rect
                     .attr("x",null)
                     .attr("y",null)
@@ -709,15 +722,16 @@
             xScaleZoom =null;
             zoom_area.on('.zoom', null);
             zoom_area.style("pointer-events", "all");
-            zoom_area.call(zoom);
-            zoom_area.call(zoom.transform,d3.zoomIdentity);
+            zoom_area.call(zoomdefination);
+            zoom_area.call(zoomdefination.transform,d3.zoomIdentity);
+           
         }
         function onLassoReactClick(event){
             const mousePoint=d3.mouse(this);
             if(d3.event.ctrlKey==true)
                 return;//Return when cntl key was pressed and mouse clicked
             if((mousePoint[0]<widthForWaterOilYAxis || mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis || mousePoint[1]>chartHeight)){
-                return [];
+                return ;
             }
             const allSelectedPoints=calculateDataOnClick(this);
             // console.log("onLassoReactClick",d3.event.ctrlKey);
@@ -898,7 +912,7 @@
             console.log("lasso_end");
             zoom_area.transition().duration(10).style("pointer-events", "all");
             zoom_area.on('.zoom', null);
-            zoom_area.call(zoom);  
+            zoom_area.call(zoomdefination);  
            
             console.log(zoom_area);
             // Reset the color of all dots
@@ -913,6 +927,7 @@
             })
             // console.log("Selected Items:", data);
             lassoSelectedData = [...lassoSelectedData, ...data];
+            console.log("lassoSelectedData:",lassoSelectedData);
             lassoEndSelectionG.html('');
             lassoEndSelectionG
                 .selectAll("circle")
@@ -940,6 +955,35 @@
                 .attr("r", circleRadius)
                 .style("fill", d => d.colors);
 
+
+            lassoEndSelectionG
+                .selectAll("rect")
+                .data(lassoSelectedData)
+                .enter()
+                .append("rect")
+                .datum(d => d)
+                .attr("x", d => xScaleLasso(d.x)-(circleRadius*2))
+                .attr("y", d => {
+                    if (d.section.toLowerCase() == 'oil')
+                        return yScaleOilLasso(( d.y))-(circleRadius*2)
+                    else if (d.section.toLowerCase() == 'gas')
+                        return yScaleGasLasso(d.y)-(circleRadius*2)
+                    else if (d.section.toLowerCase() == 'water')
+                        return yScaleWaterLasso(( d.y))-(circleRadius*2)
+                })
+                .attr("width",circleRadius*4)
+                .attr("height",circleRadius*4)
+                .attr("class", d => {
+                    if (d.section.toLowerCase() == 'oil')
+                        return "lasso-selected-rect-oil"
+                    else if (d.section.toLowerCase() == 'gas')
+                        return "lasso-selected-rect-gas"
+                    else if (d.section.toLowerCase() == 'water')
+                        return "lasso-selected-rect-water"
+                })
+                .style("fill","transparent")
+                .style("stroke", selectedLassoRect);
+
             // Reset the style of the not selected dots
             lasso.notSelectedItems()
                 .attr("r", circleRadius);
@@ -954,15 +998,7 @@
             .on("draw", lasso_draw)
             .on("end", lasso_end);
 
-        var zoom = d3.zoom()
-        .scaleExtent([-10, 20])  // This control how much you can unzoom (x0.5) and zoom (x20)
-        .extent([[0, 0], [chartWidth, chartHeight]])
-        .filter(function () {
-            return (d3.event.button === 1 || d3.event.button === 2 || (d3.event.type=='wheel' && d3.event.button === 0))
-        })
-        .on("zoom", updateChart)
-        .on("end", updateChartZoomEnd)
-        .on("start", updateChartZoomStart);
+        
 
         let zoomtransformYWater={
             x:0,y:0,k:1
@@ -1006,16 +1042,16 @@
                     return;
             }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 console.log("Reset Water:",zoomtransformYWater);
-                zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYWater.x,zoomtransformYWater.y).scale(zoomtransformYWater.k));
+                zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYWater.x,zoomtransformYWater.y).scale(zoomtransformYWater.k));
             }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
                 console.log("Reset Oil:",zoomtransformYOil);
-                zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYOil.x,zoomtransformYOil.y).scale(zoomtransformYOil.k));
+                zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYOil.x,zoomtransformYOil.y).scale(zoomtransformYOil.k));
             }else if(mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 //Center
             }
             else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 console.log("Reset Gas:",zoomtransformYGas);
-                zoom_area.transition().duration(10).call(zoom.transform,d3.zoomIdentity.translate(zoomtransformYGas.x,zoomtransformYGas.y).scale(zoomtransformYGas.k));
+                zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYGas.x,zoomtransformYGas.y).scale(zoomtransformYGas.k));
             }
         }
 
@@ -1081,6 +1117,10 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
             .attr("cx", d => (xScaleToUSe)(d.x))
             .attr("cy", d => yScaleToUSeGas(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-gas")
+            .attr("x", d => (xScaleToUSe)(d.x)-(circleRadius*2))
+            .attr("y", d => yScaleToUSeGas(( d.y) )-(circleRadius*2));
             d3.select(".line-gas").selectAll("circle")
                 .attr("cx", d => (xScaleToUSe)(d.x))
                 .attr("cy", d => yScaleToUSeGas( d.y));
@@ -1112,6 +1152,10 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
             .attr("cx", d => (xScaleToUSe)(d.x))
             .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-gas")
+            .attr("x", d => (xScaleToUSe)(d.x)-(circleRadius*2))
+            .attr("y", d => d3.event.transform.rescaleY(yScaleGas)(( d.y))-(circleRadius*2));
             d3.select(".line-gas").selectAll("circle")
                 .attr("cx", d => (xScaleToUSe)(d.x))
                 .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)( d.y));
@@ -1146,6 +1190,11 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
             .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
             .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-gas")
+            .attr("x", d => d3.event.transform.rescaleX(xScale)(d.x)-(circleRadius*2))
+            .attr("y", d => d3.event.transform.rescaleY(yScaleGas)(( d.y))-(circleRadius*2));
+
             d3.select(".line-gas").selectAll("circle")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
                 .attr("cy", d => d3.event.transform.rescaleY(yScaleGas)( d.y));
@@ -1180,6 +1229,10 @@
             .attr("cx", d => (xScaleToUSe)(d.x))
             .attr("cy", d => yScaleToUSeOil(( d.y) * lassoMultiplier));
 
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-oil")
+            .attr("x", d => (xScaleToUSe)(d.x)-(circleRadius*2))
+            .attr("y", d => yScaleToUSeOil(( d.y))-(circleRadius*2));
+
             d3.select(".line-oil").selectAll("circle")
                 .attr("cx", d => (xScaleToUSe)(d.x))
                 .attr("cy", d => yScaleToUSeOil( d.y));
@@ -1213,6 +1266,10 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
             .attr("cx", d => (xScaleToUSe)(d.x))
             .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-oil")
+            .attr("x", d => (xScaleToUSe)(d.x)-(circleRadius*2))
+            .attr("y", d => d3.event.transform.rescaleY(yScaleOil)(( d.y))-(circleRadius*2));
 
             d3.select(".line-oil").selectAll("circle")
                 .attr("cx", d => (xScaleToUSe)(d.x))
@@ -1249,6 +1306,10 @@
                     d3.select(".lasso-selected-container").selectAll(".lasso-selected-oil")
                     .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
                     .attr("cy", d => d3.event.transform.rescaleY(yScaleOil)(( d.y) * lassoMultiplier));
+
+                    d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-oil")
+                    .attr("x", d => d3.event.transform.rescaleX(xScale)(d.x)-(circleRadius*2))
+                    .attr("y", d => d3.event.transform.rescaleY(yScaleOil)(( d.y))-(circleRadius*2));
         
                     d3.select(".line-oil").selectAll("circle")
                         .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
@@ -1283,6 +1344,11 @@
             .attr("cx", d =>(xScaleToUSe)(d.x))
             .attr("cy", d => yScaleToUSeWater(( d.y) * lassoMultiplier));
 
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-water")
+            .attr("x", d =>(xScaleToUSe)(d.x)-(circleRadius*2))
+            .attr("y", d => yScaleToUSeWater(( d.y))-(circleRadius*2));
+
             d3.select(".line-water").selectAll("circle")
                 .attr("cx", d =>(xScaleToUSe)(d.x))
                 .attr("cy", d => yScaleToUSeWater( d.y));
@@ -1314,6 +1380,10 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-water")
             .attr("cx", d =>(xScaleToUSe)(d.x))
             .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-water")
+            .attr("x", d =>(xScaleToUSe)(d.x)-(circleRadius*2))
+            .attr("y", d => d3.event.transform.rescaleY(yScaleWater)(( d.y))-(circleRadius*2));
 
             d3.select(".line-water").selectAll("circle")
                 .attr("cx", d =>(xScaleToUSe)(d.x))
@@ -1349,6 +1419,10 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-water")
             .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
             .attr("cy", d => d3.event.transform.rescaleY(yScaleWater)(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-water")
+            .attr("x", d => d3.event.transform.rescaleX(xScale)(d.x)-(circleRadius*2))
+            .attr("y", d => d3.event.transform.rescaleY(yScaleWater)(( d.y))-(circleRadius*2));
 
             d3.select(".line-water").selectAll("circle")
                 .attr("cx", d => d3.event.transform.rescaleX(xScale)(d.x))
@@ -1386,6 +1460,10 @@
             .attr("cx", d => xScaleToUSe(d.x))
             .attr("cy", d => yScaleToUSeWater(( d.y) * lassoMultiplier));
 
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-water")
+            .attr("x", d => xScaleToUSe(d.x)-(circleRadius*2))
+            .attr("y", d => yScaleToUSeWater(( d.y))-(circleRadius*2));
+
             d3.select(".line-water").selectAll("circle")
                 .attr("cx", d => xScaleToUSe(d.x))
                 .attr("cy", d => yScaleToUSeWater( d.y));
@@ -1418,6 +1496,10 @@
             .attr("cx", d => xScaleToUSe(d.x))
             .attr("cy", d => yScaleToUSeOil(( d.y) * lassoMultiplier));
 
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-oil")
+            .attr("x", d => xScaleToUSe(d.x)-(circleRadius*2))
+            .attr("y", d => yScaleToUSeOil(( d.y)) -(circleRadius*2));
+
             d3.select(".line-oil").selectAll("circle")
                 .attr("cx", d => xScaleToUSe(d.x))
                 .attr("cy", d => yScaleToUSeOil( d.y));
@@ -1449,6 +1531,11 @@
             d3.select(".lasso-selected-container").selectAll(".lasso-selected-gas")
             .attr("cx", d => xScaleToUSe(d.x))
             .attr("cy", d => yScaleToUSeGas(( d.y) * lassoMultiplier));
+
+            d3.select(".lasso-selected-container").selectAll(".lasso-selected-rect-gas")
+            .attr("x", d => xScaleToUSe(d.x)-(circleRadius*2))
+            .attr("y", d => yScaleToUSeGas(( d.y))-(circleRadius*2));
+
             d3.select(".line-gas").selectAll("circle")
                 .attr("cx", d => xScaleToUSe(d.x))
                 .attr("cy", d => yScaleToUSeGas( d.y));
@@ -1466,8 +1553,8 @@
                 // GAS End
         }
         svgForLines.call(lasso);
-        zoom_area.on('.zoom', null);
-        zoom_area.call(zoom); 
+        // zoom_area.on('.zoom', null);
+        // zoom_area.call(zoom); 
         
     </script>
 </body>
