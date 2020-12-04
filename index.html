@@ -751,7 +751,10 @@
                     .attr("width",null)
                     .attr("height",null);
         }
-        function onLassoDoubleReactClick(){
+        function onLassoDoubleReactClick() {
+
+            var selection = document.getSelection();
+            selection.removeAllRanges();
             xScale = d3.scaleTime()
             .domain([minDate, maxDate])
             .range([0, chartWidth]);
@@ -1122,6 +1125,9 @@
                 console.log("Reset Gas:",zoomtransformYGas);
                 zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYGas.x,zoomtransformYGas.y).scale(zoomtransformYGas.k));
             }
+            updateMajorGridLineStokeDashedStyle();
+            updateMinorGridLineStokeDashedStyle();
+
         }
 
         function updateChart(){
@@ -1158,6 +1164,9 @@
             }else if( mousePoint[1] > widthForWaterOilYAxis && mousePoint[1] < heightForMiddleAreaWithMarginBottom && mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<widthForMiddleAreaWithWaterOilYAxis ){
                 zoomOnlyXAxis();
             }
+
+            updateMajorGridLineStokeDashedStyle();
+            updateMinorGridLineStokeDashedStyle();
         }
 
         function zoomOnlyXAxis(){
