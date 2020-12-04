@@ -169,6 +169,24 @@
                         Water</span>
                 </div>
             </div>
+            <br/>
+            <div class="major-gridline">
+                <span class="lable-dropdown">Major Gridline:</span>
+                <select id='majorGridlineData'>
+                    <option value='Default' selected>Default</option>
+                    <option value='Dotted'>Dotted</option>
+                    <option value='Dashed'>Dashed</option>
+                </select>
+            </div>
+            <br/>
+            <div class="minor-gridline">
+                <span class="lable-dropdown">Minor Gridline:</span>
+                <select id='minorGridlineData' >
+                    <option value='Default' selected>Default</option>
+                    <option value='Dotted'>Dotted</option>
+                    <option value='Dashed'>Dashed</option>
+                </select>
+            </div>
         </div>
     </div>
     <script src="d3.v5.min.js"></script>
@@ -176,7 +194,55 @@
     <script src="data.js"></script>
     <script src="d3-lasso.min.js"></script>
     <script>
+        let majorGridLineData=null;
+        let minorGridLineData=null;
+        const dottedStyleValue='1px';
+        const dashedStyleValue='5px';
+        const solidStyleValue='0px';
+        const updateMajorGridLineStokeDashedStyle=()=>{
+            let styleValue=solidStyleValue;
+            if(majorGridLineData=='Dotted'){
+                styleValue=dottedStyleValue;
+            }else if(majorGridLineData=='Dashed'){
+                styleValue=dashedStyleValue;
+            }else{
+                styleValue=solidStyleValue;
+            }
+            d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue!=''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+        }
+        const updateMinorGridLineStokeDashedStyle=()=>{
+            let styleValue=solidStyleValue;
+            if(minorGridLineData=='Dotted'){
+                styleValue=dottedStyleValue;
+            }else if(minorGridLineData=='Dashed'){
+                styleValue=dashedStyleValue;
+            }else{
+                styleValue=solidStyleValue;
+            }
+            d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue==''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+        }
+        $(document).ready(()=>{
+            $("#majorGridlineData").on("change",()=>{
+                majorGridLineData=document.getElementById("majorGridlineData").value;
+                updateMajorGridLineStokeDashedStyle();
+            });
+            $("#minorGridlineData").on("change",()=>{
+                minorGridLineData=document.getElementById("minorGridlineData").value;
+                updateMinorGridLineStokeDashedStyle();
+            });
+        });
 
+        
         const mainDivRef = "#chart";
         const margin = {
             left: 80,
@@ -1030,6 +1096,9 @@
             }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
                 zoomtransformYGas=d3.event.transform;
             }
+
+            updateMajorGridLineStokeDashedStyle();
+            updateMinorGridLineStokeDashedStyle();
         }
 
         function updateChartZoomStart(){
