@@ -244,10 +244,14 @@
                 const textValue=d3.select(element).select("text").text();
                 if(textValue!=''){
                     d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                    d3.select(element).select(".extra-yaxis-water-tick-line").style("stroke-dasharray",styleValue);
                 }
                 if(isWaterGridLineEnabled==true){
                     d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
                             d3.select(element).select("line").attr("x1",margin.left);
+                            d3.select(element).select("text").attr("x",-9);
+                            d3.select(element).selectAll(".extra-yaxis-water-tick-line").remove();
+                            d3.select(element).append("line").attr("class",'extra-yaxis-water-tick-line').attr("x1",0).attr("x2",-6);
                     })
                 }
             })
@@ -277,6 +281,7 @@
                 const textValue=d3.select(element).select("text").text();
                 if(textValue==''){
                     d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                    d3.select(element).select(".extra-yaxis-water-tick-line").style("stroke-dasharray",styleValue);
                 }
             })
             d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
@@ -308,11 +313,15 @@
                     axisGWater.call(yAxisWater.tickSize(-1 * chartWidth - margin.left));
                     d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
                             d3.select(element).select("line").attr("x1",margin.left);
+                            d3.select(element).select("text").attr("x",-9);
+                            d3.select(element).selectAll(".extra-yaxis-water-tick-line").remove();
+                            d3.select(element).append("line").attr("class",'extra-yaxis-water-tick-line').attr("x1",0).attr("x2",-6);
                     })
                 }
                 else{
                     d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
                             d3.select(element).select("line").attr("x1",0);
+                            d3.select(element).selectAll(".extra-yaxis-water-tick-line").remove();
                     })
                     axisGWater.call(yAxisWater.tickSize(6));
                 } 
