@@ -187,6 +187,19 @@
                     <option value='Dashed'>Dashed</option>
                 </select>
             </div>
+            <br/>
+            <div class='checkboxes'>
+                <input type="checkbox" id='chbxWaterGrdLine'/>
+                <span>Water Gridline</span>
+            </div>
+            <div class='checkboxes'>
+                <input type="checkbox" id='chbxOilGrdLine' checked/>
+                <span>Oil Gridline</span>
+            </div>
+            <div class='checkboxes'>
+                <input type="checkbox" id='chbxGasGrdLine'/>
+                <span>Gas Gridline</span>
+            </div>
         </div>
     </div>
     <script src="d3.v5.min.js"></script>
@@ -196,53 +209,12 @@
     <script>
         let majorGridLineData=null;
         let minorGridLineData=null;
+        let isWaterGridLineEnabled=false;
+        let isOilGridLineEnabled=true;
+        let isGasGridLineEnabled=false;
         const dottedStyleValue='1px';
         const dashedStyleValue='5px';
         const solidStyleValue='0px';
-        const updateMajorGridLineStokeDashedStyle=()=>{
-            let styleValue=solidStyleValue;
-            if(majorGridLineData=='Dotted'){
-                styleValue=dottedStyleValue;
-            }else if(majorGridLineData=='Dashed'){
-                styleValue=dashedStyleValue;
-            }else{
-                styleValue=solidStyleValue;
-            }
-            d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
-                const textValue=d3.select(element).select("text").text();
-                if(textValue!=''){
-                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
-                }
-            })
-        }
-        const updateMinorGridLineStokeDashedStyle=()=>{
-            let styleValue=solidStyleValue;
-            if(minorGridLineData=='Dotted'){
-                styleValue=dottedStyleValue;
-            }else if(minorGridLineData=='Dashed'){
-                styleValue=dashedStyleValue;
-            }else{
-                styleValue=solidStyleValue;
-            }
-            d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
-                const textValue=d3.select(element).select("text").text();
-                if(textValue==''){
-                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
-                }
-            })
-        }
-        $(document).ready(()=>{
-            $("#majorGridlineData").on("change",()=>{
-                majorGridLineData=document.getElementById("majorGridlineData").value;
-                updateMajorGridLineStokeDashedStyle();
-            });
-            $("#minorGridlineData").on("change",()=>{
-                minorGridLineData=document.getElementById("minorGridlineData").value;
-                updateMinorGridLineStokeDashedStyle();
-            });
-        });
-
-        
         const mainDivRef = "#chart";
         const margin = {
             left: 80,
@@ -258,6 +230,113 @@
         const lassoMultiplier=5;
         const widthForMiddleAreaWithWaterOilYAxis=chartWidth+widthForWaterOilYAxis;
         const heightForMiddleAreaWithMarginBottom=height-margin.top;
+
+        const updateMajorGridLineStokeDashedStyle=()=>{
+            let styleValue=solidStyleValue;
+            if(majorGridLineData=='Dotted'){
+                styleValue=dottedStyleValue;
+            }else if(majorGridLineData=='Dashed'){
+                styleValue=dashedStyleValue;
+            }else{
+                styleValue=solidStyleValue;
+            }
+            d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue!=''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+                if(isWaterGridLineEnabled==true){
+                    d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
+                            d3.select(element).select("line").attr("x1",margin.left);
+                    })
+                }
+            })
+            d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue!=''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+            d3.select(".y-axis-gas").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue!=''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+        }
+        const updateMinorGridLineStokeDashedStyle=()=>{
+            let styleValue=solidStyleValue;
+            if(minorGridLineData=='Dotted'){
+                styleValue=dottedStyleValue;
+            }else if(minorGridLineData=='Dashed'){
+                styleValue=dashedStyleValue;
+            }else{
+                styleValue=solidStyleValue;
+            }
+            d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue==''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+            d3.select(".y-axis-oil").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue==''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+            d3.select(".y-axis-gas").selectAll(".tick").nodes().forEach((element,data1)=>{
+                const textValue=d3.select(element).select("text").text();
+                if(textValue==''){
+                    d3.select(element).select("line").style("stroke-dasharray",styleValue);
+                }
+            })
+        }
+        $(document).ready(()=>{
+            $("#majorGridlineData").on("change",()=>{
+                majorGridLineData=document.getElementById("majorGridlineData").value;
+                updateMajorGridLineStokeDashedStyle();
+            });
+            $("#minorGridlineData").on("change",()=>{
+                minorGridLineData=document.getElementById("minorGridlineData").value;
+                updateMinorGridLineStokeDashedStyle();
+            });
+            $("#chbxWaterGrdLine").on("change",()=>{
+                isWaterGridLineEnabled=document.getElementById("chbxWaterGrdLine").checked;
+                console.log("isWaterGridLineEnabled:",isWaterGridLineEnabled);
+                if(isWaterGridLineEnabled==true){
+                    axisGWater.call(yAxisWater.tickSize(-1 * chartWidth - margin.left));
+                    d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
+                            d3.select(element).select("line").attr("x1",margin.left);
+                    })
+                }
+                else{
+                    d3.select(".y-axis-water").selectAll(".tick").nodes().forEach((element,data1)=>{
+                            d3.select(element).select("line").attr("x1",0);
+                    })
+                    axisGWater.call(yAxisWater.tickSize(6));
+                } 
+            });
+            $("#chbxOilGrdLine").on("change",()=>{
+                isOilGridLineEnabled=document.getElementById("chbxOilGrdLine").checked;
+                console.log("isOilGridLineEnabled:",isOilGridLineEnabled);
+                if(isOilGridLineEnabled==true)
+                    axisGOil.call(yAxisOil.tickSize(-1 * chartWidth));
+                else 
+                    axisGOil.call(yAxisOil.tickSize(6));
+            });
+            $("#chbxGasGrdLine").on("change",()=>{
+                isGasGridLineEnabled=document.getElementById("chbxGasGrdLine").checked;
+                console.log("isGasGridLineEnabled:",isGasGridLineEnabled);
+                if(isGasGridLineEnabled==true)
+                    axisGGas.call(yAxisGas.tickSize(-1 * chartWidth));
+                else 
+                    axisGGas.call(yAxisGas.tickSize(6));
+            });
+        });
+
+        
+        
 
         console.log(widthForWaterOilYAxis,widthForMiddleAreaWithWaterOilYAxis,chartHeight) ; 
 
