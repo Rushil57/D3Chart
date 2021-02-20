@@ -329,10 +329,11 @@
             $("#chbxOilGrdLine").on("change",()=>{
                 isOilGridLineEnabled=document.getElementById("chbxOilGrdLine").checked;
                 console.log("isOilGridLineEnabled:",isOilGridLineEnabled);
+                const calculatedTickSize= getCalculatedTickSize();
                 if(isOilGridLineEnabled==true)
-                    axisGOil.call(yAxisOil.tickSize(-1 * chartWidth));
+                    axisGOil.call(yAxisOil.tickSize(-1 * chartWidth).ticks(calculatedTickSize,".0f"));
                 else 
-                    axisGOil.call(yAxisOil.tickSize(6));
+                    axisGOil.call(yAxisOil.tickSize(6).ticks(calculatedTickSize,".0f"));
             });
             $("#chbxGasGrdLine").on("change",()=>{
                 isGasGridLineEnabled=document.getElementById("chbxGasGrdLine").checked;
@@ -1155,6 +1156,16 @@
             .on("draw", lasso_draw)
             .on("end", lasso_end);
 
+        function getCalculatedTickSize(){
+            const k=d3.event.transform.k;
+            const differenceFrom1=(1-d3.event.transform.k);
+            let calculatedTickSize=k<1 ? Math.round(7 + (50 * differenceFrom1)) : 7;
+            calculatedTickSize=calculatedTickSize>17 ? 17 :calculatedTickSize;
+            calculatedTickSize= k < 0.5 ? 10 :calculatedTickSize;
+            console.log(k,calculatedTickSize);
+            return calculatedTickSize;
+        }
+
         
 
         let zoomtransformYWater={
@@ -1417,7 +1428,8 @@
        
         function zoomPanOilOnlyYAxis(){
             //Oil start
-            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
+            const calculatedTickSize= getCalculatedTickSize();
+            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)).ticks(calculatedTickSize,".0f"));
                     
             const xScaleToUSe=xScaleZoom!=null ? xScaleZoom : xScale;
             noteLabelsOil.forEach(notes=>{
@@ -1456,8 +1468,8 @@
         }
        
         function zoomPanOilOnly(){
-            //Oil start
-            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
+            const calculatedTickSize= getCalculatedTickSize();
+            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)).ticks(calculatedTickSize,".0f"));
                     
                     noteLabelsOil.forEach(notes=>{
                         const xPoint=d3.event.transform.rescaleX(notes.xScaleToUSe)(notes.x);
@@ -1646,7 +1658,8 @@
             //Water End
 
             //Oil start
-            axisGOil.call(yAxisOil.scale(yScaleToUSeOil));
+            const calculatedTickSize= getCalculatedTickSize();
+            axisGOil.call(yAxisOil.scale(yScaleToUSeOil).ticks(calculatedTickSize,".0f"));
                     
             noteLabelsOil.forEach(notes=>{
                 const xPoint=xScaleToUSe(notes.x);
