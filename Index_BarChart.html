@@ -89,12 +89,7 @@
         .append("g")
         .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-    const extent = [[margin.left, margin.top], [width, height - margin.top]];
-    svg.call(d3.zoom()
-		.extent(extent)
-        .scaleExtent([1, 8])
-        .translateExtent(extent)
-        .on("zoom", zoomed));
+    
 
     svg.call(tip);
 
@@ -144,13 +139,9 @@
         .attr("fill", "#515365")
         .style("font-size", "17px")
         .style("font-weight", "700")
-        .text("Forecasted Cashflow, $M *Excludes VPP");
+        .text("Chart Title");
 
-    function zoomed(event) {
-        x.range([0, width].map(d => d3.event.transform.applyX(d)));
-        svg.selectAll(".bar").attr("x", d => x(d.year)).attr("width", x.bandwidth());
-        svg.selectAll(".x.axis").call(xAxis);
-    }
+    
 </script>
 
 
