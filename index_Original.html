@@ -207,6 +207,7 @@
     <script src="data.js"></script>
     <script src="d3-lasso.min.js"></script>
     <script>
+		let detectType = "";
         let majorGridLineData=null;
         let minorGridLineData=null;
         let isWaterGridLineEnabled=false;
@@ -331,7 +332,7 @@
                 console.log("isOilGridLineEnabled:",isOilGridLineEnabled);
                 const calculatedTickSize= getCalculatedTickSize();
                 if(isOilGridLineEnabled==true)
-                    axisGOil.call(yAxisOil.tickSize(-1 * chartWidth).ticks(calculatedTickSize,".0f"));
+                    axisGOil.call(yAxisOil.tickSize(-1 * chartWidth));
                 else 
                     axisGOil.call(yAxisOil.tickSize(6).ticks(calculatedTickSize,".0f"));
             });
@@ -749,6 +750,7 @@
                 svgForLines.call(lasso);
                 lasso.items(d3.selectAll("circle"));
             }
+			
             if((mousePoint[0]<widthForWaterOilYAxis || mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis || mousePoint[1]>chartHeight)){
                 return [];
             }
@@ -787,10 +789,12 @@
         function onLassoReactMouseOut(event){
             // console.log("Event: Mouse Out:",d3.event.ctrlKey);
             callHideTooltip(mainDivRef);
+			
         }
 
         function onLassoReactMouseDown(event){
             // console.log("onLassoReactMouseDown",d3.event.ctrlKey);
+			const mousePoint=d3.mouse(this);
             if(d3.event.ctrlKey==true){
                 const mousePoint=d3.mouse(this);
                 zoom_select_rect
@@ -804,7 +808,29 @@
                 svgForLines.call(lasso);
                 lasso.items(d3.selectAll("circle"));
             }
+			
+			//detectType = "";
+			
+			console.log("detectType keydown",detectType)
+			
+			if(d3.event.button == 2){	
+
+				if(detectType == ""){
+				if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){				
+									detectType = "water";
+								}else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){					
+									detectType = "oil";
+								}else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){					
+									detectType = "gas"
+								}	
+				}
+								
+			}
+			
+			
         }
+		
+		
 
         function onLassoReactMouseUp(event){
             // console.log("onLassoReactMouseUp",d3.event.ctrlKey);
@@ -1157,11 +1183,10 @@
             .on("end", lasso_end);
 
         function getCalculatedTickSize(){
-
+		
             if(!d3.event.transform){
                 return;
             }
-
             const k=d3.event.transform.k;
             const differenceFrom1=(1-d3.event.transform.k);
             let calculatedTickSize=k<1 ? Math.round(7 + (50 * differenceFrom1)) : 7;
@@ -1169,6 +1194,7 @@
             calculatedTickSize= k < 0.5 ? 10 :calculatedTickSize;
             console.log(k,calculatedTickSize);
             return calculatedTickSize;
+           
         }
 
         
@@ -1195,17 +1221,19 @@
             const data=d3.zoomTransform(zoom_area.node());
             if(mousePoint[0]<0 || mousePoint[0]>width){
                 return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "water"){
                 zoomtransformYWater=d3.event.transform;
                 console.log("zoomtransformYWater:",zoomtransformYWater);
-            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "oil"){
                 zoomtransformYOil=d3.event.transform;
-            }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight)  || detectType == "gas"){
                 zoomtransformYGas=d3.event.transform;
             }
 
+			detectType = "";
             updateMajorGridLineStokeDashedStyle();
             updateMinorGridLineStokeDashedStyle();
+			
         }
 
         function updateChartZoomStart(){
@@ -1213,19 +1241,21 @@
                 flagForZoom=1;
             }
             console.log("zoom start:");
+			console.log("detectType", detectType);
+			
             const mousePoint=d3.mouse(this);
             if(mousePoint[0]<0 || mousePoint[0]>width){
                     return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "water"){
                 console.log("Reset Water:",zoomtransformYWater);
                 zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYWater.x,zoomtransformYWater.y).scale(zoomtransformYWater.k));
-            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight)  || detectType == "oil"){
                 console.log("Reset Oil:",zoomtransformYOil);
                 zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYOil.x,zoomtransformYOil.y).scale(zoomtransformYOil.k));
-            }else if(mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight) || detectType == ""){
                 //Center
             }
-            else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+            else if((mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight)  || detectType == "gas"){
                 console.log("Reset Gas:",zoomtransformYGas);
                 zoom_area.transition().duration(10).call(zoomdefination.transform,d3.zoomIdentity.translate(zoomtransformYGas.x,zoomtransformYGas.y).scale(zoomtransformYGas.k));
             }
@@ -1235,39 +1265,86 @@
         }
 
         function updateChart(){
+		
+		console.log("updateChart",detectType);
+		
             const mousePoint=d3.mouse(this);
-            if(mousePoint[0]<0 || mousePoint[0]>width){
+          
+
+		if( detectType == ""){
+		  if(mousePoint[0]<0 || mousePoint[0]>width){
                 return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "water"){
                 zoomtransformYWater=d3.event.transform;
-            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "oil"){
                 zoomtransformYOil=d3.event.transform;
-            }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight) || detectType == "gas" ){
                 zoomtransformYGas=d3.event.transform;
             }
-
-            
-            // console.log("mousePoint:",mousePoint);
+			
+			
+			 // console.log("mousePoint:",mousePoint);
             const currentTransform = d3.event.transform;
             // console.log("currentTransform",currentTransform);
             if(mousePoint[0]<0 || mousePoint[0]>width){
                 return;
-            }else if(mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>0 && mousePoint[0]<=margin.left && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "water"){
                 zoomPanWaterOnlyYAxis();
-            }else if(mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>margin.left && mousePoint[0]<=widthForWaterOilYAxis && mousePoint[1]> 0 && mousePoint[1]< chartHeight) || detectType == "oil"){
                 zoomPanOilOnlyYAxis();
-            }else if(mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<=widthForMiddleAreaWithWaterOilYAxis && mousePoint[1]> 0  && mousePoint[1]< chartHeight ) || detectType == ""){
                 axisGXAxis.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
                 xScaleLasso.domain(d3.event.transform.rescaleX(xScale).domain());
                 xScaleZoom=d3.event.transform.rescaleX(xScale);
                 zoomPanWaterOnly();
                 zoomPanOilOnly();
                 zoomPanGasOnly();
-            }else if(mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight){
+            }else if((mousePoint[0]>widthForMiddleAreaWithWaterOilYAxis && mousePoint[0]<=width && mousePoint[1]> 0  && mousePoint[1]< chartHeight) || detectType == "gas"){
                 zoomPanGasOnlyYAxis();
-            }else if( mousePoint[1] > widthForWaterOilYAxis && mousePoint[1] < heightForMiddleAreaWithMarginBottom && mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<widthForMiddleAreaWithWaterOilYAxis ){
+            }else if( (mousePoint[1] > widthForWaterOilYAxis && mousePoint[1] < heightForMiddleAreaWithMarginBottom && mousePoint[0]>widthForWaterOilYAxis && mousePoint[0]<widthForMiddleAreaWithWaterOilYAxis) || detectType == "" ){
                 zoomOnlyXAxis();
             }
+			
+}
+else{
+
+	
+				
+				
+				 // console.log("mousePoint:",mousePoint);
+            const currentTransform = d3.event.transform;
+            // console.log("currentTransform",currentTransform);
+            if(mousePoint[0]<0 || mousePoint[0]>width){
+                return;
+            }else if(detectType == "water"){
+                zoomPanWaterOnlyYAxis();
+            }else if(detectType == "oil"){
+                zoomPanOilOnlyYAxis();
+            }else if(detectType == ""){
+                axisGXAxis.call(xAxis.scale(d3.event.transform.rescaleX(xScale)));
+                xScaleLasso.domain(d3.event.transform.rescaleX(xScale).domain());
+                xScaleZoom=d3.event.transform.rescaleX(xScale);
+                zoomPanWaterOnly();
+                zoomPanOilOnly();
+                zoomPanGasOnly();
+            }else if( detectType == "gas"){
+                zoomPanGasOnlyYAxis();
+            }else if(detectType == "" ){
+                zoomOnlyXAxis();
+            }
+
+
+}
+
+
+
+
+            
+           
+			
+			
+			
+			
 
             updateMajorGridLineStokeDashedStyle();
             updateMinorGridLineStokeDashedStyle();
@@ -1434,8 +1511,9 @@
         function zoomPanOilOnlyYAxis(){
             //Oil start
             const calculatedTickSize= getCalculatedTickSize();
-            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)).ticks(calculatedTickSize,".0f"));
+            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
                     
+					
             const xScaleToUSe=xScaleZoom!=null ? xScaleZoom : xScale;
             noteLabelsOil.forEach(notes=>{
                 const xPoint=(xScaleToUSe)(notes.x);
@@ -1474,7 +1552,7 @@
        
         function zoomPanOilOnly(){
             const calculatedTickSize= getCalculatedTickSize();
-            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)).ticks(calculatedTickSize,".0f"));
+            axisGOil.call(yAxisOil.scale(d3.event.transform.rescaleY(yScaleOil)));
                     
                     noteLabelsOil.forEach(notes=>{
                         const xPoint=d3.event.transform.rescaleX(notes.xScaleToUSe)(notes.x);
@@ -1664,7 +1742,7 @@
 
             //Oil start
             const calculatedTickSize= getCalculatedTickSize();
-            axisGOil.call(yAxisOil.scale(yScaleToUSeOil).ticks(calculatedTickSize,".0f"));
+            axisGOil.call(yAxisOil.scale(yScaleToUSeOil));
                     
             noteLabelsOil.forEach(notes=>{
                 const xPoint=xScaleToUSe(notes.x);
