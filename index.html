@@ -821,12 +821,16 @@
                     const yScaleToUSeWater=yScaleWaterZoom!=null ? yScaleWaterZoom : yScaleWater;
                     xScaleToUSe.domain([xScaleToUSe.invert(startX-marginLeft),xScaleToUSe.invert(widthOfRect)]);
                     yScaleToUSeWater.domain([yScaleToUSeWater.invert(heightOfRect),yScaleToUSeWater.invert(startY)]); 
-
+                    // console.log("yScaleToUSeWater:",yScaleToUSeWater.domain(),yScaleToUSeWater.range(),yScaleWater.range());
+                    yScaleWater=yScaleToUSeWater;
+                    xScale=xScaleToUSe;
                     const yScaleToUSeOil=yScaleOilZoom!=null ? yScaleOilZoom : yScaleOil;
                     yScaleToUSeOil.domain([yScaleToUSeOil.invert(heightOfRect),yScaleToUSeOil.invert(startY)]); 
+                    yScaleOil=yScaleToUSeOil;
 
                     const yScaleToUSeGas=yScaleGasZoom!=null ? yScaleGasZoom : yScaleGas;
                     yScaleToUSeGas.domain([yScaleToUSeGas.invert(heightOfRect),yScaleToUSeGas.invert(startY)]); 
+                    yScaleGas=yScaleToUSeGas;
 
                     zoomPanWaterOnlyOnRect(xScaleToUSe,yScaleToUSeWater,yScaleToUSeOil,yScaleToUSeGas);
                 }
@@ -839,6 +843,7 @@
                     .attr("y",null)
                     .attr("width",null)
                     .attr("height",null);
+            zoom_area.call(zoomdefination.transform,d3.zoomIdentity);
         }
         function onLassoDoubleReactClick() {
 
