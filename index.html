@@ -152,9 +152,15 @@
             stroke-width: 2px;
             pointer-events: none;
         }
-        .svg-slider-triangle path{
+        .svg-slider-triangle .triangle-path{
                 fill: #ccc;
                 cursor: move;
+        }
+        .svg-slider-triangle .triangle-path-default{
+            fill: transparent;
+            cursor: move;
+            stroke: #ccc;
+            stroke-width: 2px;
         }
         .triangle-text{
             text-anchor: middle;
@@ -165,6 +171,16 @@
             stroke: rgba(0,0,0,0.5);
             stroke-width: 1px;
             stroke-dasharray: 5px;
+        }
+        .reset-button{
+            display: inline;
+            font-size: 15px;
+            font-weight: 600;
+            background: #ccc;
+            padding: 10px 20px;
+            border-radius: 5px;
+            color: red;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -217,6 +233,8 @@
                 <input type="checkbox" id='chbxGasGrdLine' />
                 <span>Gas Gridline</span>
             </div>
+            <br /><br />
+            <div class="reset-button" id="resetTriangleClick">Reset Triangle</div>
         </div>
     </div>
     <script src="d3.v5.min.js"></script>
@@ -369,6 +387,10 @@
                 else
                     axisGGas.call(yAxisGas.tickSize(6));
             });
+
+            $("#resetTriangleClick").on("click",()=>{
+                drawTriangleAtBothEnd();
+            })
         });
 
 
@@ -594,68 +616,77 @@
             d3.select(".right-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(rightTriangleXValue)));
             d3.select(".left-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(leftTriangleXValue)));
         }
-        var lineGenerator = d3.line();
-        let x1=-(widthOfTriangle*0.5),x2=widthOfTriangle/2,x3=0;
-        var pointsLeftTriangle = [
-            [x1, 0],
-            [x2, 0],
-            [x3, heightOfTriangle],
-            [x1, 0]
-        ];
-        var pointsRightTriangle = [
-            [x1, 0],
-            [x2, 0],
-            [x3, heightOfTriangle],
-            [x1, 0]
-        ];
-        let xLftLinePoint=0,y1LeftLinePoint=heightOfTriangle,y2LeftLinePoint=heightOfTriangle+chartHeight+2;
-        var pointsLeftTriangleLine = [
-            [xLftLinePoint, y1LeftLinePoint],
-            [xLftLinePoint, y2LeftLinePoint],
-        ];
-        xLftLinePoint=x3,y1LeftLinePoint=heightOfTriangle,y2LeftLinePoint=heightOfTriangle+chartHeight+2;
-        var pointsRightTriangleLine = [
-            [xLftLinePoint, y1LeftLinePoint],
-            [xLftLinePoint, y2LeftLinePoint],
-        ];
-        var leftTrianglePath = lineGenerator(pointsLeftTriangle);
-        var leftTriangleLine = lineGenerator(pointsLeftTriangleLine);
-        var rightTrianglePath = lineGenerator(pointsRightTriangle);
-        var rightTriangleLine = lineGenerator(pointsRightTriangleLine);
-        const sliderIconContainer = svg
-            .append("g")
-            .attr("class", "svg-slider-container")
-            .attr("transform", `translate(${widthForWaterOilYAxis},${margin.top - heightOfTriangle})`);
-        const leftTriangleG=sliderIconContainer.append("g")
-        .attr("transform",`translate(0,0)`)
-        .attr("class", "svg-slider-left svg-slider-triangle").call(d3.drag()
-        .on("drag", (d)=>{dragged(d,'leftTriangle')}));
-        
-        leftTriangleG.append('path')
-        .attr("d",leftTrianglePath);
-        leftTriangleG.append('path')
-        .attr("class",'left-triangle-line triangle-line')
-        .attr("d",leftTriangleLine);
-        leftTriangleG.append("text")
-        .attr("class",'left-triangle-text triangle-text')
-        .text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(0)));
+ 
+        function drawTriangleAtBothEnd(){
+            var lineGenerator = d3.line();
+            let x1=-(widthOfTriangle*0.5),x2=widthOfTriangle/2,x3=0;
+            var pointsLeftTriangle = [
+                [x1, 0],
+                [x2, 0],
+                [x3, heightOfTriangle],
+                [x1, 0]
+            ];
+            var pointsRightTriangle = [
+                [x1, 0],
+                [x2, 0],
+                [x3, heightOfTriangle],
+                [x1, 0]
+            ];
+            let xLftLinePoint=0,y1LeftLinePoint=heightOfTriangle,y2LeftLinePoint=heightOfTriangle+chartHeight+2;
+            var pointsLeftTriangleLine = [
+                [xLftLinePoint, y1LeftLinePoint],
+                [xLftLinePoint, y2LeftLinePoint],
+            ];
+            xLftLinePoint=x3,y1LeftLinePoint=heightOfTriangle,y2LeftLinePoint=heightOfTriangle+chartHeight+2;
+            var pointsRightTriangleLine = [
+                [xLftLinePoint, y1LeftLinePoint],
+                [xLftLinePoint, y2LeftLinePoint],
+            ];
+            var leftTrianglePath = lineGenerator(pointsLeftTriangle);
+            var leftTriangleLine = lineGenerator(pointsLeftTriangleLine);
+            var rightTrianglePath = lineGenerator(pointsRightTriangle);
+            var rightTriangleLine = lineGenerator(pointsRightTriangleLine);
+            d3.selectAll(".svg-slider-container").remove();
+            const sliderIconContainer = svg
+                .append("g")
+                .attr("class", "svg-slider-container")
+                .attr("transform", `translate(${widthForWaterOilYAxis},${margin.top - heightOfTriangle})`);
+            const leftTriangleG=sliderIconContainer.append("g")
+            .attr("transform",`translate(0,0)`)
+            .attr("class", "svg-slider-left svg-slider-triangle").call(d3.drag()
+            .on("drag", (d)=>{dragged(d,'leftTriangle')}));
+            
+            leftTriangleG.append('path')
+            .attr("class",'triangle-path triangle-path-default')
+            .attr("d",leftTrianglePath);
+            leftTriangleG.append('path')
+            .attr("class",'left-triangle-line triangle-line')
+            .attr("d",leftTriangleLine);
+            leftTriangleG.append("text")
+            .attr("class",'left-triangle-text triangle-text')
+            .text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(0)));
+    
+            const rightTriangleG=sliderIconContainer.append("g")
+            .attr("transform",`translate(${chartWidth},0)`)
+            .attr("class", "svg-slider-right svg-slider-triangle").call(d3.drag()
+            .on("drag", (d)=>{dragged(d,'rightTriangle')}));
+    
+            rightTriangleG.append('path')
+            .attr("class",'triangle-path triangle-path-default')
+            .attr("d",rightTrianglePath);
+            rightTriangleG.append('path')
+            .attr("class",'right-triangle-line triangle-line')
+            .attr("d",rightTriangleLine);
+            rightTriangleG.append("text")
+            .attr("class",'right-triangle-text triangle-text')
+            .text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(chartWidth)));
 
-        const rightTriangleG=sliderIconContainer.append("g")
-        .attr("transform",`translate(${chartWidth},0)`)
-        .attr("class", "svg-slider-right svg-slider-triangle").call(d3.drag()
-        .on("drag", (d)=>{dragged(d,'rightTriangle')}));
-
-        rightTriangleG.append('path')
-        .attr("d",rightTrianglePath);
-        rightTriangleG.append('path')
-        .attr("class",'right-triangle-line triangle-line')
-        .attr("d",rightTriangleLine);
-        rightTriangleG.append("text")
-        .attr("class",'right-triangle-text triangle-text')
-        .text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(chartWidth)));
+            d3.selectAll(".triangle-text").text("N/A");
+            d3.selectAll(".triangle-path").classed("triangle-path-default",true);
+        }
+        drawTriangleAtBothEnd();
 
         const dragged=(d,sliderRef)=>{
-            console.log("xScaleZoom:",xScaleZoom.domain(),"\txScale:",xScaleZoom.domain());
             const xValue=d3.event.x;
             const rightTringleNode=d3.select('.svg-slider-right').node();
             const leftTringleNode=d3.select('.svg-slider-left').node();
@@ -665,6 +696,7 @@
             const leftTriangleXValue=getTranslation(leftTringleNode.getAttribute("transform"))[0];
             //CBT:Left Triangle 
             if(sliderRef=='leftTriangle' && xValue>-1 && xValue<((chartWidth+1)) && xValue<rightTriangleXValue){
+                d3.select(".svg-slider-left").select(".triangle-path").classed("triangle-path-default",false);
                 d3.select(".svg-slider-left").attr("transform",`translate(${xValue},0)`);
                 d3.select(".left-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(xValue)));
                 const overlapDifference=(leftTriangleXValue+(leftTringleTextNode.width/2))-(rightTriangleXValue-(rightTringleTextNode.width/2));
@@ -674,6 +706,7 @@
                     d3.select('.left-triangle-text').attr("x",0);
                 }
             }else if(sliderRef=='rightTriangle' && xValue>-1 && xValue<((chartWidth+1)) && xValue>leftTriangleXValue){
+                d3.select(".svg-slider-right").select(".triangle-path").classed("triangle-path-default",false);
                 d3.select(".svg-slider-right").attr("transform",`translate(${xValue},0)`);
                 d3.select(".right-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(xValue)));
                 const overlapDifference=(rightTriangleXValue-(rightTringleTextNode.width/2))-(leftTriangleXValue+(leftTringleTextNode.width/2));
