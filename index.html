@@ -607,14 +607,70 @@
             .attr("clip-path", "url(#clip)")
             .attr("transform", `translate(${widthForWaterOilYAxis},${margin.top})`);
         //CBT:slider start
+        function updateLeftTraingleWithGridLine(leftTriangleText,xScaleZoom,sliderRef){
+            const xValue=xScaleZoom(new Date(leftTriangleText));
+            const rightTringleNode=d3.select('.svg-slider-right').node();
+            const leftTringleNode=d3.select('.svg-slider-left').node();
+            const leftTringleTextNode=d3.select('.left-triangle-text').node().getBBox();
+            const rightTringleTextNode=d3.select('.right-triangle-text').node().getBBox();
+            const rightTriangleXValue=getTranslation(rightTringleNode.getAttribute("transform"))[0];
+            const leftTriangleXValue=getTranslation(leftTringleNode.getAttribute("transform"))[0];
+            //CBT:Left Triangle 
+            if(sliderRef=='leftTriangle' && xValue<((chartWidth+1)) && xValue<rightTriangleXValue){
+                d3.select(".svg-slider-left").attr("transform",`translate(${xValue<0 ? 0 :xValue},0)`);
+                const overlapDifference=(leftTriangleXValue+(leftTringleTextNode.width/2))-(rightTriangleXValue-(rightTringleTextNode.width/2));
+                if(overlapDifference>0){
+                    d3.select('.left-triangle-text').attr("x",-1*(leftTringleTextNode.width));
+                }else{
+                    d3.select('.left-triangle-text').attr("x",0);
+                }
+                if(xValue<0){
+                    d3.select(".svg-slider-left").select(".left-triangle-line").style("display","none");
+                }else{
+                    d3.select(".svg-slider-left").select(".left-triangle-line").style("display","block");
+                }
+            }     
+        }
+        function updateRightTraingleWithGridLine(rightTriangleText,xScaleZoom,sliderRef){
+            const xValue=xScaleZoom(new Date(rightTriangleText));
+            const rightTringleNode=d3.select('.svg-slider-right').node();
+            const leftTringleNode=d3.select('.svg-slider-left').node();
+            const leftTringleTextNode=d3.select('.left-triangle-text').node().getBBox();
+            const rightTringleTextNode=d3.select('.right-triangle-text').node().getBBox();
+            const rightTriangleXValue=getTranslation(rightTringleNode.getAttribute("transform"))[0];
+            const leftTriangleXValue=getTranslation(leftTringleNode.getAttribute("transform"))[0];
+            //CBT:Left Triangle
+            if(sliderRef=='rightTriangle' && xValue>-1 && xValue>leftTriangleXValue){
+                d3.select(".svg-slider-right").attr("transform",`translate(${xValue>chartWidth ? chartWidth :xValue},0)`);
+                const overlapDifference=(rightTriangleXValue-(rightTringleTextNode.width/2))-(leftTriangleXValue+(leftTringleTextNode.width/2));
+                if(overlapDifference<0){
+                    d3.select('.right-triangle-text').attr("x",(rightTringleTextNode.width));
+                }else{
+                    d3.select('.right-triangle-text').attr("x",0);
+                }
+                if(xValue>chartWidth){
+                    d3.select(".svg-slider-right").select(".right-triangle-line").style("display","none");
+                }else{
+                    d3.select(".svg-slider-right").select(".right-triangle-line").style("display","block");
+                }
+            } 
+        }
         function updateTriangleText(){
-            console.log("xScaleZoom:",xScaleZoom.domain(),"\txScale:",xScale.domain());
             const rightTringleNode=d3.select('.svg-slider-right').node();
             const leftTringleNode=d3.select('.svg-slider-left').node();
             const rightTriangleXValue=getTranslation(rightTringleNode.getAttribute("transform"))[0];
             const leftTriangleXValue=getTranslation(leftTringleNode.getAttribute("transform"))[0]; 
-            d3.select(".right-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(rightTriangleXValue)));
-            d3.select(".left-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(leftTriangleXValue)));
+            if(d3.select(".right-triangle-text").text()!="N/A"){
+                // d3.select(".right-triangle-text").text(d3.timeFormat(triangleTextDisplayFromat)(xScaleZoom.invert(rightTriangleXValue)));
+            }
+            const leftTriangleText=d3.select(".left-triangle-text").text();
+            const rightTriangleText=d3.select(".right-triangle-text").text();
+            if(leftTriangleText!="N/A"){
+                updateLeftTraingleWithGridLine(leftTriangleText,xScaleZoom,'leftTriangle');
+            }
+            if(rightTriangleText!='N/A'){
+                updateRightTraingleWithGridLine(rightTriangleText,xScaleZoom,'rightTriangle');
+            }
         }
  
         function drawTriangleAtBothEnd(){
@@ -688,6 +744,8 @@
 
         const dragged=(d,sliderRef)=>{
             const xValue=d3.event.x;
+            d3.select(".svg-slider-left").select(".left-triangle-line").style("display","block");
+            d3.select(".svg-slider-right").select(".right-triangle-line").style("display","block");
             const rightTringleNode=d3.select('.svg-slider-right').node();
             const leftTringleNode=d3.select('.svg-slider-left').node();
             const leftTringleTextNode=d3.select('.left-triangle-text').node().getBBox();
@@ -858,7 +916,7 @@
             .scaleExtent([-10, 20])  // This control how much you can unzoom (x0.5) and zoom (x20)
             .extent([[0, 0], [chartWidth, chartHeight]])
             .filter(function () {
-                console.log(d3.event.button, d3.event.type);
+                // console.log(d3.event.button, d3.event.type);
                 return (d3.event.button == 1 || d3.event.button == 2 || (d3.event.type == 'wheel' && d3.event.button == 0))
             })
             .on("zoom", updateChart)
@@ -1237,12 +1295,12 @@
         let lassoSelectedData = [];
 
         var lasso_end = function () {
-            console.log("lasso_end");
+            // console.log("lasso_end");
             zoom_area.transition().duration(10).style("pointer-events", "all");
             zoom_area.on('.zoom', null);
             zoom_area.call(zoomdefination);
 
-            console.log(zoom_area);
+            // console.log(zoom_area);
             // Reset the color of all dots
             lasso.items()
                 .classed("not_possible", false)
@@ -1255,7 +1313,7 @@
             })
             // console.log("Selected Items:", data);
             lassoSelectedData = [...lassoSelectedData, ...data];
-            console.log("lassoSelectedData:", lassoSelectedData);
+            // console.log("lassoSelectedData:", lassoSelectedData);
             lassoEndSelectionG.html('');
             lassoEndSelectionG
                 .selectAll("circle")
@@ -1337,7 +1395,7 @@
             let calculatedTickSize = k < 1 ? Math.round(7 + (50 * differenceFrom1)) : 7;
             calculatedTickSize = calculatedTickSize > 17 ? 17 : calculatedTickSize;
             calculatedTickSize = k < 0.5 ? 10 : calculatedTickSize;
-            console.log(k, calculatedTickSize);
+            // console.log(k, calculatedTickSize);
             return calculatedTickSize;
         }
 
@@ -1353,7 +1411,7 @@
         let flagForZoom = 0;
         let initZoom = 0;
         function updateChartZoomEnd() {
-            console.log("zoom end:");
+            // console.log("zoom end:");
             const mousePoint = d3.mouse(this);
             if (flagForZoom == 1) {
                 initZoom = 1;
@@ -1367,7 +1425,7 @@
                 return;
             } else if (mousePoint[0] > 0 && mousePoint[0] <= margin.left && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
                 zoomtransformYWater = d3.event.transform;
-                console.log("zoomtransformYWater:", zoomtransformYWater);
+                // console.log("zoomtransformYWater:", zoomtransformYWater);
             } else if (mousePoint[0] > margin.left && mousePoint[0] <= widthForWaterOilYAxis && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
                 zoomtransformYOil = d3.event.transform;
             } else if (mousePoint[0] > widthForMiddleAreaWithWaterOilYAxis && mousePoint[0] <= width && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
@@ -1382,21 +1440,21 @@
             if (initZoom == 0) {
                 flagForZoom = 1;
             }
-            console.log("zoom start:");
+            // console.log("zoom start:");
             const mousePoint = d3.mouse(this);
             if (mousePoint[0] < 0 || mousePoint[0] > width) {
                 return;
             } else if (mousePoint[0] > 0 && mousePoint[0] <= margin.left && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
-                console.log("Reset Water:", zoomtransformYWater);
+                // console.log("Reset Water:", zoomtransformYWater);
                 zoom_area.transition().duration(10).call(zoomdefination.transform, d3.zoomIdentity.translate(zoomtransformYWater.x, zoomtransformYWater.y).scale(zoomtransformYWater.k));
             } else if (mousePoint[0] > margin.left && mousePoint[0] <= widthForWaterOilYAxis && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
-                console.log("Reset Oil:", zoomtransformYOil);
+                // console.log("Reset Oil:", zoomtransformYOil);
                 zoom_area.transition().duration(10).call(zoomdefination.transform, d3.zoomIdentity.translate(zoomtransformYOil.x, zoomtransformYOil.y).scale(zoomtransformYOil.k));
             } else if (mousePoint[0] > widthForWaterOilYAxis && mousePoint[0] <= widthForMiddleAreaWithWaterOilYAxis && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
                 //Center
             }
             else if (mousePoint[0] > widthForMiddleAreaWithWaterOilYAxis && mousePoint[0] <= width && mousePoint[1] > 0 && mousePoint[1] < chartHeight) {
-                console.log("Reset Gas:", zoomtransformYGas);
+                // console.log("Reset Gas:", zoomtransformYGas);
                 zoom_area.transition().duration(10).call(zoomdefination.transform, d3.zoomIdentity.translate(zoomtransformYGas.x, zoomtransformYGas.y).scale(zoomtransformYGas.k));
             }
             updateMajorGridLineStokeDashedStyle();
